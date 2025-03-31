@@ -1,0 +1,10 @@
+[package]
+name = "commit-validator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+git-conventional = "0.12.9"
+
+[dev-dependencies]
+cargo-husky = { version = "1.5.0", features = ["user-hooks"] }
