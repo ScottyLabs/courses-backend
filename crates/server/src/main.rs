@@ -1,54 +1,18 @@
-use std::net::SocketAddr;
+mod routes;
+mod utils;
 
-use axum::{Extension, Router, http::StatusCode, routing::get};
+use axum::{Json, routing::get};
 use axum_server::{Handle, tls_rustls::RustlsConfig};
 use dotenv_codegen::dotenv;
 use log::info;
-use tokio::signal;
+use routes::{health, root};
+use std::net::SocketAddr;
 use tower::ServiceBuilder;
-use tower_oauth2_resource_server::{claims::DefaultClaims, server::OAuth2ResourceServer};
+use tower_oauth2_resource_server::server::OAuth2ResourceServer;
+use utils::shutdown::shutdown_signal;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 const OIDC_ISSUER_URL: &str = dotenv!("OIDC_ISSUER_URL");
-
-async fn health() -> &'static str {
-    "OK"
-}
-
-async fn root(claims: Extension<DefaultClaims>) -> Result<(StatusCode, String), StatusCode> {
-    let sub = claims
-        .sub
-        .as_ref()
-        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok((StatusCode::OK, format!("Hello, {}", sub)))
-}
-
-async fn shutdown_signal(handle: Handle) {
-    let ctrl_c = async {
-        signal::ctrl_c()
-            .await
-            .expect("failed to install Ctrl+C handler");
-    };
-
-    #[cfg(unix)]
-    let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("failed to install signal handler")
-            .recv()
-            .await;
-    };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-
-    tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
-    }
-
-    // Trigger graceful shutdown
-    handle.graceful_shutdown(None);
-}
 
 #[tokio::main]
 async fn main() {
@@ -60,13 +24,19 @@ async fn main() {
         .await
         .expect("Failed to build OAuth2ResourceServer");
 
-    let protected_routes = Router::new()
-        .route("/", get(root))
+    let protected_routes = OpenApiRouter::new()
+        .routes(routes!(root::root))
         .layer(ServiceBuilder::new().layer(oauth2_resource_server.into_layer()));
 
-    let public_routes = Router::new().route("/health", get(health));
+    let public_routes = OpenApiRouter::new().routes(routes!(health::health));
 
-    let app = Router::new().merge(protected_routes).merge(public_routes);
+    let (router, api) = OpenApiRouter::new()
+        .merge(protected_routes)
+        .merge(public_routes)
+        .split_for_parts();
+
+    // Add a route to serve the OpenAPI JSON
+    let app = router.route("/openapi.json", get(|| async move { Json(api) }));
 
     // Load TLS configuration
     let cert_path = std::env::var("TLS_CERT_PATH").unwrap_or("certs/localhost+2.pem".to_string());
