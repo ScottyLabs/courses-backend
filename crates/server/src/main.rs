@@ -14,6 +14,7 @@ use tower_oauth2_resource_server::server::OAuth2ResourceServer;
 use utils::shutdown::shutdown_signal;
 use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_redoc::{Redoc, Servable};
 
 const OIDC_ISSUER_URL: &str = dotenv!("OIDC_ISSUER_URL");
 
@@ -39,7 +40,9 @@ async fn main() {
         .split_for_parts();
 
     // Add a route to serve the OpenAPI JSON
-    let app = router.route("/openapi.json", get(|| async move { Json(api) }));
+    let app = router
+        .route("/openapi.json", get(|| async move { Json(api) }))
+        .merge(Redoc::with_url("/redoc", ApiDoc::openapi()));
 
     // Load TLS configuration
     let cert_path = std::env::var("TLS_CERT_PATH").unwrap_or("certs/localhost+2.pem".to_string());
