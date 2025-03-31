@@ -1,4 +1,7 @@
+use std::net::SocketAddr;
+
 use axum::{Extension, Router, http::StatusCode, routing::get};
+use axum_server::{Handle, tls_rustls::RustlsConfig};
 use dotenv_codegen::dotenv;
 use log::info;
 use tokio::signal;
@@ -20,7 +23,7 @@ async fn root(claims: Extension<DefaultClaims>) -> Result<(StatusCode, String), 
     Ok((StatusCode::OK, format!("Hello, {}", sub)))
 }
 
-async fn shutdown_signal() {
+async fn shutdown_signal(handle: Handle) {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
@@ -42,6 +45,9 @@ async fn shutdown_signal() {
         _ = ctrl_c => {},
         _ = terminate => {},
     }
+
+    // Trigger graceful shutdown
+    handle.graceful_shutdown(None);
 }
 
 #[tokio::main]
@@ -49,7 +55,6 @@ async fn main() {
     env_logger::init();
 
     let oauth2_resource_server = <OAuth2ResourceServer>::builder()
-        // .audiences(&["courses-backend"])
         .issuer_url(OIDC_ISSUER_URL)
         .build()
         .await
@@ -63,11 +68,26 @@ async fn main() {
 
     let app = Router::new().merge(protected_routes).merge(public_routes);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    info!("Running axum on http://localhost:3000");
+    // Load TLS configuration
+    let cert_path = std::env::var("TLS_CERT_PATH").unwrap_or("certs/localhost+2.pem".to_string());
+    let key_path = std::env::var("TLS_KEY_PATH").unwrap_or("certs/localhost+2-key.pem".to_string());
 
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
+    let config = RustlsConfig::from_pem_file(cert_path, key_path)
+        .await
+        .expect("Failed to load TLS configuration");
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    info!("Running axum on https://localhost:3000");
+
+    // Create server handle for graceful shutdown
+    let handle = Handle::new();
+    let shutdown_handle = handle.clone();
+    tokio::spawn(shutdown_signal(shutdown_handle));
+
+    // Bind with TLS configuration
+    axum_server::bind_rustls(addr, config)
+        .handle(handle) // axum_server does not support axum's .with_graceful_shutdown
+        .serve(app.into_make_service())
         .await
         .unwrap();
 }
