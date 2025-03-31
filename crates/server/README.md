@@ -4,7 +4,7 @@ https://docs.railway.com/guides/axum
 
 ## Development
 
-This project supports HTTPS connections using TLS certificates. You can use `mkcert` to generate trusted certificates.
+This project supports HTTPS connections using TLS certificates. You must use `mkcert` to generate trusted certificates.
 
 1. Install `mkcert` as instructed [here](https://github.com/FiloSottile/mkcert?tab=readme-ov-file#installation).
 2. Create and navigate to a `certs` directory in this one:
