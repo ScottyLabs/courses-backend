@@ -1,15 +1,18 @@
+mod doc;
 mod routes;
 mod utils;
 
 use axum::{Json, routing::get};
 use axum_server::{Handle, tls_rustls::RustlsConfig};
+use doc::ApiDoc;
 use dotenv_codegen::dotenv;
 use log::info;
-use routes::{health, root};
+use routes::{auth, health};
 use std::net::SocketAddr;
 use tower::ServiceBuilder;
 use tower_oauth2_resource_server::server::OAuth2ResourceServer;
 use utils::shutdown::shutdown_signal;
+use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 const OIDC_ISSUER_URL: &str = dotenv!("OIDC_ISSUER_URL");
@@ -25,12 +28,12 @@ async fn main() {
         .expect("Failed to build OAuth2ResourceServer");
 
     let protected_routes = OpenApiRouter::new()
-        .routes(routes!(root::root))
+        .routes(routes!(auth::root))
         .layer(ServiceBuilder::new().layer(oauth2_resource_server.into_layer()));
 
     let public_routes = OpenApiRouter::new().routes(routes!(health::health));
 
-    let (router, api) = OpenApiRouter::new()
+    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .merge(protected_routes)
         .merge(public_routes)
         .split_for_parts();
