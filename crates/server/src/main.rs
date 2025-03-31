@@ -7,6 +7,10 @@ use tower_oauth2_resource_server::{claims::DefaultClaims, server::OAuth2Resource
 
 const OIDC_ISSUER_URL: &str = dotenv!("OIDC_ISSUER_URL");
 
+async fn health() -> &'static str {
+    "OK"
+}
+
 async fn root(claims: Extension<DefaultClaims>) -> Result<(StatusCode, String), StatusCode> {
     let sub = claims
         .sub
@@ -51,12 +55,16 @@ async fn main() {
         .await
         .expect("Failed to build OAuth2ResourceServer");
 
-    let app = Router::new()
+    let protected_routes = Router::new()
         .route("/", get(root))
         .layer(ServiceBuilder::new().layer(oauth2_resource_server.into_layer()));
 
+    let public_routes = Router::new().route("/health", get(health));
+
+    let app = Router::new().merge(protected_routes).merge(public_routes);
+
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    info!("Running axum on https://localhost:3000");
+    info!("Running axum on http://localhost:3000");
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
