@@ -33,6 +33,7 @@ impl Modify for SecurityAddon {
     info(
         title = "Course API",
         version = "1.0.0",
+        description = "CMU Courses API",
         license(
             name = "MIT OR Apache-2.0",
         )
