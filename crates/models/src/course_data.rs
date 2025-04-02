@@ -231,7 +231,7 @@ impl FromStr for BuildingRoom {
                 let mut parts = bldg_room.split_whitespace();
                 Some(Self::Specific(
                     parts.next().unwrap_or("").to_string(),
-                    parts.next().unwrap_or("").to_string(),
+                    parts.collect::<Vec<_>>().join(" "),
                 ))
             })
             .ok_or(())
@@ -495,6 +495,16 @@ mod test {
         if let BuildingRoom::Specific(building, room) = BuildingRoom::from_str("GHC").unwrap() {
             assert_eq!(building, "GHC");
             assert_eq!(room, "");
+        } else {
+            panic!("Expected BuildingRoom::Specific variant");
+        }
+
+        // Test multipart room
+        if let BuildingRoom::Specific(building, room) =
+            BuildingRoom::from_str("CUC AR 254").unwrap()
+        {
+            assert_eq!(building, "CUC");
+            assert_eq!(room, "AR 254");
         } else {
             panic!("Expected BuildingRoom::Specific variant");
         }
