@@ -360,7 +360,7 @@ impl From<String> for ComponentType {
 /// Represents a lecture or section of a course
 #[derive(Debug, Clone, Serialize)]
 pub struct CourseComponent {
-    /// Course title
+    /// Course title (can vary by section)
     pub title: String,
     /// Whether this is a lecture or section
     pub component_type: ComponentType,
