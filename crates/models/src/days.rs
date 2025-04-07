@@ -134,7 +134,7 @@ impl BitAndAssign for DaySet {
 }
 
 /// Represents when a meeting can occur
-#[derive(Debug, Clone, Copy, Default, Serialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
 pub enum Days {
     /// Specific days
     Days(DaySet),

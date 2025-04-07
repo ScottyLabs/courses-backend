@@ -12,7 +12,7 @@ use std::{
 use strum::{EnumIter, EnumProperty, IntoEnumIterator};
 
 /// Represents a time range for a meeting
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct TimeRange {
     pub begin: NaiveTime,
     pub end: NaiveTime,
@@ -37,7 +37,7 @@ impl TimeRange {
 }
 
 /// Represents a place where a meeting can occur
-#[derive(Debug, Clone, Serialize, EnumProperty, EnumIter)]
+#[derive(Debug, Clone, PartialEq, Serialize, EnumProperty, EnumIter)]
 pub enum BuildingRoom {
     #[strum(props(display = "TBA", parse = "TBA"))]
     ToBeAnnounced,
@@ -91,7 +91,7 @@ impl Display for BuildingRoom {
 }
 
 /// Represents a location where a meeting can occur
-#[derive(Debug, Clone, Serialize, EnumProperty, EnumIter)]
+#[derive(Debug, Clone, PartialEq, Serialize, EnumProperty, EnumIter)]
 pub enum Location {
     #[strum(props(display = "Pittsburgh, Pennsylvania"))]
     Pittsburgh,
@@ -155,7 +155,7 @@ impl Display for Location {
 }
 
 /// Represents a single meeting with location and instructor
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Meeting {
     /// Days the meeting occurs
     pub days: Days,
@@ -195,7 +195,7 @@ impl From<String> for ComponentType {
 }
 
 /// Represents a lecture or section of a course
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CourseComponent {
     /// Course title (can vary by section)
     pub title: String,
@@ -208,7 +208,7 @@ pub struct CourseComponent {
 }
 
 /// Represents a course entry from the schedule
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CourseEntry {
     /// Course number (e.g., "15122")
     pub number: String,
