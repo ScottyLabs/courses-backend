@@ -1,3 +1,7 @@
+use crate::courses::line::Line;
+use models::units::Units;
+use std::str::FromStr;
+
 /// Discard the header rows in the SOC file before parsing
 ///
 /// # Arguments
@@ -39,7 +43,7 @@ fn is_section_code(s: &str) -> bool {
 ///
 /// # Returns
 /// * A `Line` enum variant representing the type of line
-fn parse_line(line: &str) -> Line {
+pub fn parse_line(line: &str) -> Line {
     let trimmed = line.trim();
 
     if trimmed.is_empty() {
@@ -62,26 +66,26 @@ fn parse_line(line: &str) -> Line {
 
         // SecondaryCourseHeader: number + title + units
         [number, title, units, ..]
-        if is_course_number(number) && Units::from_str(units).is_ok() =>
-            {
-                Line::SecondaryCourseHeader {
-                    number: number.to_string(),
-                    title: title.trim().to_string(),
-                    units: units.to_string(),
-                }
+            if is_course_number(number) && Units::from_str(units).is_ok() =>
+        {
+            Line::SecondaryCourseHeader {
+                number: number.to_string(),
+                title: title.trim_end_matches(':').trim().to_string(),
+                units: units.to_string(),
             }
+        }
 
         // PrimaryCourseComponent: starts with units
         [
-        units,
-        section,
-        days,
-        time_start,
-        time_end,
-        building_room,
-        location,
-        instructors,
-        ..,
+            units,
+            section,
+            days,
+            time_start,
+            time_end,
+            building_room,
+            location,
+            instructors,
+            ..,
         ] if Units::from_str(units).is_ok() => Line::PrimaryCourseComponent {
             units: units.to_string(),
             section: section.to_string(),
@@ -95,14 +99,14 @@ fn parse_line(line: &str) -> Line {
 
         // SecondaryCourseComponent: starts with section
         [
-        section,
-        days,
-        time_start,
-        time_end,
-        building_room,
-        location,
-        instructors,
-        ..,
+            section,
+            days,
+            time_start,
+            time_end,
+            building_room,
+            location,
+            instructors,
+            ..,
         ] if is_section_code(section) => Line::SecondaryCourseComponent {
             section: section.to_string(),
             days: days.to_string(),
@@ -146,4 +150,138 @@ fn parse_line(line: &str) -> Line {
 /// A `Vec<Line>` representing all non-header lines, each classified into its appropriate variant.
 pub fn first_pass(input: &str) -> Vec<Line> {
     preprocess_lines(input).map(parse_line).collect()
+}
+
+#[cfg(test)]
+mod test {
+    use crate::courses::first_pass::parse_line;
+    use crate::courses::line::Line;
+
+    #[test]
+    fn test_parse_line() {
+        let input = "\
+\tArchitecture\t\t\t\t\t\t\t\t
+\t48025\tFirst Year Seminar: Architecture Edition
+\t\t\t3.0\tA\tR\t12:30PM\t01:50PM\tMM A14\tPittsburgh, Pennsylvania\tWorkinger
+\t48104\tShop Skills
+\t\t\tVAR\tA1\tMW\t10:00AM\t10:50AM\tCFA A9\tPittsburgh, Pennsylvania\tHolmes
+\t\t\t\tA2\tMW\t10:00AM\t10:50AM\tCFA A9\tPittsburgh, Pennsylvania\tHolmes
+\t48214\tGenerative Modeling
+\t\t\t9.0\tLec\tTBA\t\t\tDNM DNM\tPittsburgh, Pennsylvania\tBard
+\t\t\t\tA\tM\t10:00AM\t10:50AM\tMM 303\tPittsburgh, Pennsylvania\tBard
+\t48313\tNew Pedogogies:\t9.0\t\t\t\t\t\t
+
+\t\tUnreasonable Architecture
+\t\t\t\tA\tTR\t11:00AM\t12:20PM\tTBD TBD\tPittsburgh, Pennsylvania\tSindi
+\t\tNew Pedogogies\t\t\t\t\t\t\t
+\t\tStorycraft
+\t\t\t\tD\tMW\t11:00AM\t12:20PM\tTBA\tPittsburgh, Pennsylvania\tStone";
+
+        let lines: Vec<&str> = input.lines().collect();
+
+        let expected: Vec<Line> = vec![
+            Line::Department("Architecture".into()),
+            Line::CourseHeader {
+                number: "48025".into(),
+                title: "First Year Seminar: Architecture Edition".into(),
+            },
+            Line::PrimaryCourseComponent {
+                units: "3.0".into(),
+                section: "A".into(),
+                days: "R".into(),
+                time_start: "12:30PM".into(),
+                time_end: "01:50PM".into(),
+                building_room: "MM A14".into(),
+                location: "Pittsburgh, Pennsylvania".into(),
+                instructors: "Workinger".into(),
+            },
+            Line::CourseHeader {
+                number: "48104".into(),
+                title: "Shop Skills".into(),
+            },
+            Line::PrimaryCourseComponent {
+                units: "VAR".into(),
+                section: "A1".into(),
+                days: "MW".into(),
+                time_start: "10:00AM".into(),
+                time_end: "10:50AM".into(),
+                building_room: "CFA A9".into(),
+                location: "Pittsburgh, Pennsylvania".into(),
+                instructors: "Holmes".into(),
+            },
+            Line::SecondaryCourseComponent {
+                section: "A2".into(),
+                days: "MW".into(),
+                time_start: "10:00AM".into(),
+                time_end: "10:50AM".into(),
+                building_room: "CFA A9".into(),
+                location: "Pittsburgh, Pennsylvania".into(),
+                instructors: "Holmes".into(),
+            },
+            Line::CourseHeader {
+                number: "48214".into(),
+                title: "Generative Modeling".into(),
+            },
+            Line::PrimaryCourseComponent {
+                units: "9.0".into(),
+                section: "Lec".into(),
+                days: "TBA".into(),
+                time_start: "".into(),
+                time_end: "".into(),
+                building_room: "DNM DNM".into(),
+                location: "Pittsburgh, Pennsylvania".into(),
+                instructors: "Bard".into(),
+            },
+            Line::SecondaryCourseComponent {
+                section: "A".into(),
+                days: "M".into(),
+                time_start: "10:00AM".into(),
+                time_end: "10:50AM".into(),
+                building_room: "MM 303".into(),
+                location: "Pittsburgh, Pennsylvania".into(),
+                instructors: "Bard".into(),
+            },
+            Line::SecondaryCourseHeader {
+                number: "48313".into(),
+                title: "New Pedogogies:".into(),
+                units: "9.0".into(),
+            },
+            Line::Empty,
+            Line::ComponentTitle("Unreasonable Architecture".into()),
+            Line::SecondaryCourseComponent {
+                section: "A".into(),
+                days: "TR".into(),
+                time_start: "11:00AM".into(),
+                time_end: "12:20PM".into(),
+                building_room: "TBD TBD".into(),
+                location: "Pittsburgh, Pennsylvania".into(),
+                instructors: "Sindi".into(),
+            },
+            Line::ComponentTitle("New Pedogogies".into()),
+            Line::ComponentTitle("Storycraft".into()),
+            Line::SecondaryCourseComponent {
+                section: "D".into(),
+                days: "MW".into(),
+                time_start: "11:00AM".into(),
+                time_end: "12:20PM".into(),
+                building_room: "TBA".into(),
+                location: "Pittsburgh, Pennsylvania".into(),
+                instructors: "Stone".into(),
+            },
+        ];
+
+        assert_eq!(lines.len(), expected.len(), "Line count mismatch");
+
+        for (i, (line, expected_line)) in lines.iter().zip(expected).enumerate() {
+            let parsed = parse_line(line);
+            assert_eq!(
+                parsed,
+                expected_line,
+                "Mismatch at line {}:\ninput: {:?}\nparsed: {:?}",
+                i + 1,
+                line,
+                parsed
+            );
+        }
+    }
 }
