@@ -2,7 +2,6 @@ mod doc;
 mod routes;
 mod utils;
 
-use axum::{Json, routing::get};
 use axum_server::{Handle, tls_rustls::RustlsConfig};
 use doc::ApiDoc;
 use dotenv_codegen::dotenv;
@@ -14,7 +13,7 @@ use tower_oauth2_resource_server::server::OAuth2ResourceServer;
 use utils::shutdown::shutdown_signal;
 use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
-use utoipa_redoc::{Redoc, Servable};
+use utoipa_swagger_ui::SwaggerUi;
 
 const OIDC_ISSUER_URL: &str = dotenv!("OIDC_ISSUER_URL");
 
@@ -34,15 +33,12 @@ async fn main() {
 
     let public_routes = OpenApiRouter::new().routes(routes!(health::health));
 
-    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+    let (router, _api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .merge(protected_routes)
         .merge(public_routes)
         .split_for_parts();
 
-    // Add a route to serve the OpenAPI JSON
-    let app = router
-        .route("/openapi.json", get(|| async move { Json(api) }))
-        .merge(Redoc::with_url("/redoc", ApiDoc::openapi()));
+    let app = router.merge(SwaggerUi::new("/swagger").url("/openapi.json", ApiDoc::openapi()));
 
     // Load TLS configuration
     let cert_path = std::env::var("TLS_CERT_PATH").unwrap_or("certs/localhost+2.pem".to_string());

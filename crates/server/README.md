@@ -29,9 +29,17 @@ TLS_CERT_PATH="path/to/name.pem"
 TLS_KEY_PATH="path/to/name-key.pem"
 ```
 
-### Visualization
+### Running
 
-The API is documented with [Redoc](https://crates.io/crates/utoipa-redoc), which makes use of our `rustdoc` comments. To view it:
+To run the server, use the following command:
+
+```sh
+RUST_LOG=info cargo run
+```
+
+### API Docs
+
+The API is documented with [Swagger](https://crates.io/crates/utoipa-swagger), which makes use of our `rustdoc` comments. To view it:
 
 1. Start the server
-2. Navigate to `/redoc` in your browser (e.g., https://localhost:3000/redoc)
+2. Navigate to `/swagger` in your browser (e.g., https://localhost:3000/swagger)
