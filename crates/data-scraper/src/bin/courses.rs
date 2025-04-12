@@ -1,9 +1,15 @@
-use data_scraper::courses::first_pass::first_pass;
-use data_scraper::courses::second_pass::second_pass;
+use data_scraper::{
+    courses::{first_pass::first_pass, second_pass::second_pass},
+    util::{DEFAULT_OUTPUT_DIR, ensure_dir},
+};
 use futures::future::join_all;
 use models::syllabus_data::{Season, Year};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use reqwest::Client;
+use std::{fs::File, io::Write, path::Path};
+
+/// Output file name
+const OUTPUT_FILE: &str = "output.txt";
 
 /// Retrieves the year from the course data text
 ///
@@ -22,6 +28,11 @@ fn extract_year(text: &str) -> Option<Year> {
 /// Orchestrates the scraping of course details
 #[tokio::main]
 async fn main() {
+    ensure_dir(DEFAULT_OUTPUT_DIR).unwrap();
+
+    let path = Path::new(DEFAULT_OUTPUT_DIR).join(OUTPUT_FILE);
+    let mut file = File::create(path).expect("Failed to create output file");
+
     let client = Client::new();
 
     // Build futures for downloading each season's data
@@ -62,5 +73,5 @@ async fn main() {
         .collect::<Vec<_>>();
 
     let output = format!("{:#?}", results);
-    std::fs::write("output.txt", output).expect("Unable to write file");
+    Write::write_all(&mut file, output.as_bytes()).expect("Failed to write to file");
 }
