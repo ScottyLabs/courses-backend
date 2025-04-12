@@ -1,4 +1,4 @@
-use data_scraper::{
+use datafetcher::{
     courses::{first_pass::first_pass, second_pass::second_pass},
     util::{DEFAULT_OUTPUT_DIR, ensure_dir},
 };

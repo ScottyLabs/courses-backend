@@ -1,4 +1,4 @@
-use data_scraper::util::{
+use datafetcher::util::{
     create_csv_writer, execute_hurl, get_captures, insert_variable, zip_captures,
 };
 use dotenv_codegen::dotenv;
