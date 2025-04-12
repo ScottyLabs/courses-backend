@@ -20,7 +20,7 @@ const OUTPUT_FILE: &str = "courses.txt";
 /// * An `Option<Year>` which is the year extracted from the text
 fn extract_year(text: &str) -> Option<Year> {
     let line = text.lines().nth(3)?;
-    let year_str = line.trim().split_whitespace().last()?;
+    let year_str = line.split_whitespace().last()?;
 
     year_str.parse::<u16>().ok().map(Year)
 }

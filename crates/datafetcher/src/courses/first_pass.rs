@@ -33,7 +33,7 @@ fn is_course_number(s: &str) -> bool {
 /// `true` if the input starts with an uppercase ASCII letter, `false` otherwise.
 fn is_section_code(s: &str) -> bool {
     let first = s.chars().next();
-    first.map_or(false, |c| c.is_ascii_uppercase())
+    first.is_some_and(|c| c.is_ascii_uppercase())
 }
 
 /// Determines which `Line` variant a single line fits into
