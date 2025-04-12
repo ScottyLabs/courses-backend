@@ -9,7 +9,7 @@ use reqwest::Client;
 use std::{fs::File, io::Write, path::Path};
 
 /// Output file name
-const OUTPUT_FILE: &str = "output.txt";
+const OUTPUT_FILE: &str = "courses.txt";
 
 /// Retrieves the year from the course data text
 ///
