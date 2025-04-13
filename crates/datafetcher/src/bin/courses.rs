@@ -70,6 +70,7 @@ async fn main() {
 
             second_pass(lines, season, year)
         })
+        .flatten()
         .collect::<Vec<_>>();
 
     let output = format!("{:#?}", results);
