@@ -154,6 +154,39 @@ impl Display for Location {
     }
 }
 
+/// Represents the instructor(s) for a course
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Instructors(Option<Vec<String>>);
+
+impl FromStr for Instructors {
+    type Err = ();
+
+    fn from_str(instructors: &str) -> Result<Self, Self::Err> {
+        let instructors = instructors
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .collect::<Vec<_>>();
+
+        if instructors.is_empty() {
+            Ok(Self(None))
+        } else {
+            Ok(Self(Some(instructors)))
+        }
+    }
+}
+
+impl From<&str> for Instructors {
+    fn from(s: &str) -> Self {
+        Self::from_str(s).unwrap()
+    }
+}
+
+impl From<String> for Instructors {
+    fn from(s: String) -> Self {
+        Self::from_str(&s).unwrap()
+    }
+}
+
 /// Represents a single meeting with location and instructor
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Meeting {
@@ -166,7 +199,7 @@ pub struct Meeting {
     /// Location (campus)
     pub location: Location,
     /// Instructor(s) for this specific meeting
-    pub instructors: String,
+    pub instructors: Instructors,
 }
 
 /// Type of course component
