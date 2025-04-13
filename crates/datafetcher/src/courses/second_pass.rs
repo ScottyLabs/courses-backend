@@ -1,10 +1,9 @@
 use crate::courses::line::Line;
-use models::course_data::{
-    BuildingRoom, ComponentType, CourseComponent, CourseEntry, Location, Meeting, TimeRange,
+use models::{
+    course_data::{ComponentType, CourseComponent, CourseEntry, Meeting, TimeRange},
+    syllabus_data::{Season, Year},
+    units::Units,
 };
-use models::days::Days;
-use models::syllabus_data::{Season, Year};
-use models::units::Units;
 
 fn parse_meetings(
     lines: &[Line],
@@ -16,11 +15,11 @@ fn parse_meetings(
     location: String,
 ) -> (Vec<Meeting>, &[Line]) {
     let mut meetings = vec![Meeting {
-        days: Days::from(days),
+        days: days.into(),
         time: TimeRange::from_strings(&time_start, &time_end),
-        bldg_room: BuildingRoom::from(building_room),
-        location: Location::from(location),
-        instructors: instructors.clone(),
+        bldg_room: building_room.into(),
+        location: location.into(),
+        instructors: instructors.clone().into(),
     }];
 
     let mut remaining = lines;
@@ -37,11 +36,11 @@ fn parse_meetings(
     ] = remaining
     {
         meetings.push(Meeting {
-            days: Days::from(days.clone()),
+            days: days.clone().into(),
             time: TimeRange::from_strings(time_start, time_end),
-            bldg_room: BuildingRoom::from(building_room.clone()),
-            location: Location::from(location.clone()),
-            instructors: instructors.clone(),
+            bldg_room: building_room.clone().into(),
+            location: location.clone().into(),
+            instructors: instructors.clone().into(),
         });
 
         remaining = rest;
@@ -212,9 +211,13 @@ fn parse_course(lines: &[Line], season: Season, year: Year) -> Option<(CourseEnt
     };
 
     let (components, inferred_units, remaining) = parse_components(rest, title);
-    let units = header_units
-        .or(inferred_units)
-        .expect("Expected units from either course header or first component");
+    let units = header_units.or(inferred_units).unwrap_or_else(|| {
+        eprintln!(
+            "Warning: no units found for course {} - defaulting to VAR",
+            number
+        );
+        Units::VAR
+    });
 
     Some((
         CourseEntry {
@@ -314,7 +317,7 @@ mod test {
                         time: Some(TimeRange::from_strings("12:30PM", "01:50PM").unwrap()),
                         bldg_room: BuildingRoom::Specific("MM".to_string(), "A14".to_string()),
                         location: Location::Pittsburgh,
-                        instructors: "Workinger".to_string(),
+                        instructors: "Workinger".into(),
                     }],
                 }],
             },
@@ -333,7 +336,7 @@ mod test {
                             time: Some(TimeRange::from_strings("10:00AM", "10:50AM").unwrap()),
                             bldg_room: BuildingRoom::Specific("CFA".to_string(), "A9".to_string()),
                             location: Location::Pittsburgh,
-                            instructors: "Holmes".to_string(),
+                            instructors: "Holmes".into(),
                         }],
                     },
                     CourseComponent {
@@ -345,7 +348,7 @@ mod test {
                             time: Some(TimeRange::from_strings("10:00AM", "10:50AM").unwrap()),
                             bldg_room: BuildingRoom::Specific("CFA".to_string(), "A9".to_string()),
                             location: Location::Pittsburgh,
-                            instructors: "Holmes".to_string(),
+                            instructors: "Holmes".into(),
                         }],
                     },
                 ],
@@ -365,7 +368,7 @@ mod test {
                             time: None,
                             bldg_room: BuildingRoom::DoesNotMeet,
                             location: Location::Pittsburgh,
-                            instructors: "Bard".to_string(),
+                            instructors: "Bard".into(),
                         }],
                     },
                     CourseComponent {
@@ -377,7 +380,7 @@ mod test {
                             time: Some(TimeRange::from_strings("10:00AM", "10:50AM").unwrap()),
                             bldg_room: BuildingRoom::Specific("MM".to_string(), "303".to_string()),
                             location: Location::Pittsburgh,
-                            instructors: "Bard".to_string(),
+                            instructors: "Bard".into(),
                         }],
                     },
                 ],
@@ -397,7 +400,7 @@ mod test {
                             time: Some(TimeRange::from_strings("11:00AM", "12:20PM").unwrap()),
                             bldg_room: BuildingRoom::ToBeDetermined,
                             location: Location::Pittsburgh,
-                            instructors: "Sindi".to_string(),
+                            instructors: "Sindi".into(),
                         }],
                     },
                     CourseComponent {
@@ -409,7 +412,7 @@ mod test {
                             time: Some(TimeRange::from_strings("11:00AM", "12:20PM").unwrap()),
                             bldg_room: BuildingRoom::ToBeAnnounced,
                             location: Location::Pittsburgh,
-                            instructors: "Stone".to_string(),
+                            instructors: "Stone".into(),
                         }],
                     },
                 ],

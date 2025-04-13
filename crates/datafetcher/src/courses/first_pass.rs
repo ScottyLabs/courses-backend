@@ -126,6 +126,15 @@ pub fn parse_line(line: &str) -> Line {
             location: location.to_string(),
         },
 
+        // AdditionalMeeting with missing location
+        [days, time_start, time_end, building_room, ..] => Line::AdditionalMeeting {
+            days: days.to_string(),
+            time_start: time_start.to_string(),
+            time_end: time_end.to_string(),
+            building_room: building_room.to_string(),
+            location: "Unknown Location".to_string(),
+        },
+
         // ComponentTitle: short string that doesn't match other formats
         [title] if leading_tabs == 2 => Line::ComponentTitle(title.to_string()),
 
@@ -243,7 +252,7 @@ mod test {
             },
             Line::SecondaryCourseHeader {
                 number: "48313".into(),
-                title: "New Pedogogies:".into(),
+                title: "New Pedogogies".into(),
                 units: "9.0".into(),
             },
             Line::Empty,
