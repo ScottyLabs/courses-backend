@@ -1,4 +1,6 @@
-# courses-backend
+# Collie
+
+This is the new backend repository for CMU Courses.
 
 ## Development
 
