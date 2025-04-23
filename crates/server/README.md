@@ -6,7 +6,14 @@ https://docs.railway.com/guides/axum
 
 ### Setup
 
-This project supports HTTPS connections using TLS certificates. You must use `mkcert` to generate trusted certificates.
+This project optionally supports HTTPS connections using TLS certificates. To enable the feature, enable the `tls` feature, e.g.
+
+```sh
+cargo build # tls disabled (default)
+cargo run --features tls # tls enabled
+```
+
+You must use `mkcert` to generate trusted certificates.
 
 1. Install `mkcert` as instructed [here](https://github.com/FiloSottile/mkcert?tab=readme-ov-file#installation).
 2. Create and navigate to a `certs` directory in this one:

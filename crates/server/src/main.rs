@@ -2,12 +2,10 @@ mod doc;
 mod routes;
 mod utils;
 
-use axum_server::{Handle, tls_rustls::RustlsConfig};
 use doc::ApiDoc;
 use dotenv_codegen::dotenv;
 use log::info;
 use routes::{auth, health};
-use std::net::SocketAddr;
 use tower::ServiceBuilder;
 use tower_oauth2_resource_server::server::OAuth2ResourceServer;
 use utils::shutdown::shutdown_signal;
@@ -40,26 +38,42 @@ async fn main() {
 
     let app = router.merge(SwaggerUi::new("/swagger").url("/openapi.json", ApiDoc::openapi()));
 
-    // Load TLS configuration
-    let cert_path = std::env::var("TLS_CERT_PATH").unwrap_or("certs/localhost+2.pem".to_string());
-    let key_path = std::env::var("TLS_KEY_PATH").unwrap_or("certs/localhost+2-key.pem".to_string());
+    #[cfg(feature = "tls")]
+    {
+        // Load TLS configuration
+        let cert_path =
+            std::env::var("TLS_CERT_PATH").unwrap_or("certs/localhost+2.pem".to_string());
+        let key_path =
+            std::env::var("TLS_KEY_PATH").unwrap_or("certs/localhost+2-key.pem".to_string());
 
-    let config = RustlsConfig::from_pem_file(cert_path, key_path)
-        .await
-        .expect("Failed to load TLS configuration");
+        let config = RustlsConfig::from_pem_file(cert_path, key_path)
+            .await
+            .expect("Failed to load TLS configuration");
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    info!("Running axum on https://localhost:3000");
+        let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+        info!("Running axum on https://localhost:3000");
 
-    // Create server handle for graceful shutdown
-    let handle = Handle::new();
-    let shutdown_handle = handle.clone();
-    tokio::spawn(shutdown_signal(shutdown_handle));
+        // Create server handle for graceful shutdown
+        let handle = Handle::new();
+        let shutdown_handle = handle.clone();
+        tokio::spawn(shutdown_signal(shutdown_handle));
 
-    // Bind with TLS configuration
-    axum_server::bind_rustls(addr, config)
-        .handle(handle) // axum_server does not support axum's .with_graceful_shutdown
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+        // Bind with TLS configuration
+        axum_server::bind_rustls(addr, config)
+            .handle(handle) // axum_server does not support axum's .with_graceful_shutdown
+            .serve(app.into_make_service())
+            .await
+            .unwrap();
+    }
+
+    #[cfg(not(feature = "tls"))]
+    {
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+        info!("Running axum on http://localhost:3000");
+
+        axum::serve(listener, app)
+            .with_graceful_shutdown(shutdown_signal())
+            .await
+            .unwrap();
+    }
 }
