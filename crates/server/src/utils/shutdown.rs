@@ -1,5 +1,8 @@
 use tokio::signal;
 
+#[cfg(feature = "tls")]
+use axum_server::Handle;
+
 /// Listens for shutdown signals (Ctrl+C or Unix signals)
 #[cfg(feature = "tls")]
 pub async fn shutdown_signal(handle: Handle) {

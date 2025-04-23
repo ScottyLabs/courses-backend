@@ -13,6 +13,12 @@ use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_swagger_ui::SwaggerUi;
 
+#[cfg(feature = "tls")]
+use {
+    axum_server::{Handle, tls_rustls::RustlsConfig},
+    std::net::SocketAddr,
+};
+
 const OIDC_ISSUER_URL: &str = dotenv!("OIDC_ISSUER_URL");
 
 #[tokio::main]
