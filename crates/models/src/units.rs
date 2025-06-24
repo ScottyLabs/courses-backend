@@ -66,7 +66,7 @@ impl Display for UnitTypeSimple {
                 if value.fract() == 0.0 {
                     write!(f, "{}", *value as i32)
                 } else {
-                    write!(f, "{}", value)
+                    write!(f, "{value}")
                 }
             }
             Self::Range(min, max) => {
@@ -74,7 +74,7 @@ impl Display for UnitTypeSimple {
                 if min.fract() == 0.0 && max.fract() == 0.0 {
                     write!(f, "{}-{}", *min as i32, *max as i32)
                 } else {
-                    write!(f, "{}-{}", min, max)
+                    write!(f, "{min}-{max}")
                 }
             }
         }
@@ -147,10 +147,10 @@ impl FromStr for UnitType {
         // Check if it's a single range (e.g., "3-9")
         if s.contains('-') && !s.contains(',') {
             let parts = s.split('-').collect::<Vec<_>>();
-            if parts.len() == 2 {
-                if let (Ok(min), Ok(max)) = (parts[0].parse::<f32>(), parts[1].parse::<f32>()) {
-                    return Ok(Self::Range(min, max));
-                }
+            if parts.len() == 2
+                && let (Ok(min), Ok(max)) = (parts[0].parse::<f32>(), parts[1].parse::<f32>())
+            {
+                return Ok(Self::Range(min, max));
             }
         }
 
@@ -169,13 +169,12 @@ impl FromStr for UnitType {
             if part.contains('-') {
                 // This is a range
                 let range_parts: Vec<&str> = part.split('-').collect();
-                if range_parts.len() == 2 {
-                    if let (Ok(min), Ok(max)) =
+                if range_parts.len() == 2
+                    && let (Ok(min), Ok(max)) =
                         (range_parts[0].parse::<f32>(), range_parts[1].parse::<f32>())
-                    {
-                        simple_units.push(UnitTypeSimple::Range(min, max));
-                        continue;
-                    }
+                {
+                    simple_units.push(UnitTypeSimple::Range(min, max));
+                    continue;
                 }
             }
 
@@ -250,7 +249,7 @@ impl Display for UnitType {
                 if value.fract() == 0.0 {
                     write!(f, "{}", *value as i32)
                 } else {
-                    write!(f, "{}", value)
+                    write!(f, "{value}")
                 }
             }
             Self::Range(min, max) => {
@@ -258,7 +257,7 @@ impl Display for UnitType {
                 if min.fract() == 0.0 && max.fract() == 0.0 {
                     write!(f, "{}-{}", *min as i32, *max as i32)
                 } else {
-                    write!(f, "{}-{}", min, max)
+                    write!(f, "{min}-{max}")
                 }
             }
             Self::Multi(units) => {
@@ -268,7 +267,7 @@ impl Display for UnitType {
                     if !first {
                         write!(f, ",")?;
                     }
-                    write!(f, "{}", unit)?;
+                    write!(f, "{unit}")?;
                     first = false;
                 }
                 Ok(())
@@ -337,7 +336,7 @@ impl Display for Units {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
             Self::VAR => write!(f, "VAR"),
-            Self::Value(unit_type) => write!(f, "{}", unit_type),
+            Self::Value(unit_type) => write!(f, "{unit_type}"),
         }
     }
 }

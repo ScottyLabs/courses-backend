@@ -21,5 +21,5 @@ pub async fn root(claims: Extension<DefaultClaims>) -> Result<(StatusCode, Strin
         .as_ref()
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok((StatusCode::OK, format!("Hello, {}", sub)))
+    Ok((StatusCode::OK, format!("Hello, {sub}")))
 }

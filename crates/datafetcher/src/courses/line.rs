@@ -62,27 +62,23 @@ pub enum Line {
 impl Display for Line {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Line::Department(name) => write!(f, "Department: {}", name),
+            Line::Department(name) => write!(f, "Department: {name}"),
             Line::CourseHeader { number, title } => {
-                write!(f, "CourseHeader: {} - {}", number, title)
+                write!(f, "CourseHeader: {number} - {title}")
             }
             Line::SecondaryCourseHeader {
                 number,
                 title,
                 units,
             } => {
-                write!(
-                    f,
-                    "SecondaryCourseHeader: {} - {} ({})",
-                    number, title, units
-                )
+                write!(f, "SecondaryCourseHeader: {number} - {title} ({units})")
             }
-            Line::ComponentTitle(title) => write!(f, "ComponentTitle: {}", title),
+            Line::ComponentTitle(title) => write!(f, "ComponentTitle: {title}"),
             Line::PrimaryCourseComponent { section, .. } => {
-                write!(f, "PrimaryCourseComponent: {}", section)
+                write!(f, "PrimaryCourseComponent: {section}")
             }
             Line::SecondaryCourseComponent { section, .. } => {
-                write!(f, "SecondaryCourseComponent: {}", section)
+                write!(f, "SecondaryCourseComponent: {section}")
             }
             Line::AdditionalMeeting {
                 days,
@@ -90,14 +86,10 @@ impl Display for Line {
                 time_end,
                 ..
             } => {
-                write!(
-                    f,
-                    "AdditionalMeeting: {} at {}-{}",
-                    days, time_start, time_end
-                )
+                write!(f, "AdditionalMeeting: {days} at {time_start}-{time_end}")
             }
             Line::Empty => write!(f, "Empty"),
-            Line::Unknown(line) => write!(f, "Unknown: {}", line),
+            Line::Unknown(line) => write!(f, "Unknown: {line}"),
         }
     }
 }

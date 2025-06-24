@@ -61,14 +61,14 @@ fn parse_title(title: &str) -> (String, String) {
         [course_num, section] if course_num.len() == 5 => {
             (course_num.to_string(), section.to_string())
         }
-        [first, second] => (format!("{}{}", first, second), String::new()),
+        [first, second] => (format!("{first}{second}"), String::new()),
         [course_num, label, _]
             if matches!(label.to_lowercase().as_str(), "objectives" | "syllabus") =>
         {
             (course_num.to_string(), String::new())
         }
-        [first, second, section] => (format!("{}{}", first, second), section.to_string()),
-        [first, second, rest @ ..] => (format!("{}{}", first, second), rest.join("-")),
+        [first, second, section] => (format!("{first}{second}"), section.to_string()),
+        [first, second, rest @ ..] => (format!("{first}{second}"), rest.join("-")),
     }
 }
 
@@ -104,10 +104,7 @@ fn process_department(
         Ok(result) if result.success => result,
         Ok(_) => return None,
         Err(e) => {
-            eprintln!(
-                "Failed to run file URLs script for department {}: {}",
-                department, e
-            );
+            eprintln!("Failed to run file URLs script for department {department}: {e}");
             return None;
         }
     };

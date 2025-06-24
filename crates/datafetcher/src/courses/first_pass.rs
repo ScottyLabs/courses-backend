@@ -140,7 +140,7 @@ pub fn parse_line(line: &str) -> Line {
 
         // Unknown: matches none of the above, log for diagnostics
         _ => {
-            println!("Unknown line format: {}", line);
+            println!("Unknown line format: {line}");
             Line::Unknown(line.to_string())
         }
     }

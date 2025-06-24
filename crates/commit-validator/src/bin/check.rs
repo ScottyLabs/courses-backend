@@ -12,7 +12,7 @@ fn main() {
     let commit_msg = match fs::read_to_string(commit_msg_file) {
         Ok(msg) => msg,
         Err(e) => {
-            eprintln!("Failed to read commit message file: {}", e);
+            eprintln!("Failed to read commit message file: {e}");
             process::exit(1);
         }
     };
@@ -20,7 +20,7 @@ fn main() {
     match Commit::parse(&commit_msg) {
         Ok(_) => process::exit(0),
         Err(e) => {
-            eprintln!("Invalid commit format: {}", e);
+            eprintln!("Invalid commit format: {e}");
             eprintln!("Expected format: <type>[optional scope]: <description>");
             eprintln!("Examples:");
             eprintln!("  feat: add user authentication");

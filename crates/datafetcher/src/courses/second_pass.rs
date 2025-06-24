@@ -169,8 +169,8 @@ fn parse_components(
 
                     match non_redundant.as_slice() {
                         [] => header_title.clone(),
-                        [only] => format!("{}: {}", header_title, only),
-                        [.., last] => format!("{}: {}", header_title, last),
+                        [only] => format!("{header_title}: {only}"),
+                        [.., last] => format!("{header_title}: {last}"),
                     }
                 };
 
@@ -212,10 +212,7 @@ fn parse_course(lines: &[Line], season: Season, year: Year) -> Option<(CourseEnt
 
     let (components, inferred_units, remaining) = parse_components(rest, title);
     let units = header_units.or(inferred_units).unwrap_or_else(|| {
-        eprintln!(
-            "Warning: no units found for course {} - defaulting to VAR",
-            number
-        );
+        eprintln!("Warning: no units found for course {number} - defaulting to VAR");
         Units::VAR
     });
 

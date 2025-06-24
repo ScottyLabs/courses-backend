@@ -37,7 +37,7 @@ pub fn get_captures(result: &HurlResult) -> Vec<&CaptureResult> {
 /// If the variable insertion fails
 pub fn insert_variable(vars: &mut VariableSet, key: &str, value: &str) {
     vars.insert(key.to_string(), Value::String(value.to_string()))
-        .unwrap_or_else(|_| panic!("Failed to insert variable: {}", key));
+        .unwrap_or_else(|_| panic!("Failed to insert variable: {key}"));
 }
 
 /// Executes a Hurl script with variables
@@ -53,7 +53,7 @@ pub fn execute_hurl(script: &str, vars: &VariableSet) -> Result<HurlResult, Stri
     let logger_opts = LoggerOptionsBuilder::new().verbosity(None).build();
 
     runner::run(script, None, &runner_opts, vars, &logger_opts)
-        .map_err(|e| format!("Hurl execution failed: {}", e))
+        .map_err(|e| format!("Hurl execution failed: {e}"))
 }
 
 /// Ensures a directory exists, creating it if necessary
@@ -67,7 +67,7 @@ pub fn ensure_dir(dir_path: &str) -> Result<(), String> {
     let path = Path::new(dir_path);
     if !path.exists() {
         fs::create_dir_all(path)
-            .map_err(|e| format!("Failed to create directory '{}': {}", dir_path, e))?;
+            .map_err(|e| format!("Failed to create directory '{dir_path}': {e}"))?;
     }
 
     Ok(())
@@ -86,13 +86,13 @@ pub fn create_csv_writer(filename: &str, headers: &[&str]) -> Result<Writer<File
     ensure_dir(DEFAULT_OUTPUT_DIR)?;
 
     let path = Path::new(DEFAULT_OUTPUT_DIR).join(filename);
-    let file = File::create(path)
-        .map_err(|e| format!("Failed to create CSV file '{}': {}", filename, e))?;
+    let file =
+        File::create(path).map_err(|e| format!("Failed to create CSV file '{filename}': {e}"))?;
 
     let mut writer = Writer::from_writer(file);
     writer
         .write_record(headers)
-        .map_err(|e| format!("Failed to write CSV headers: {}", e))?;
+        .map_err(|e| format!("Failed to write CSV headers: {e}"))?;
 
     Ok(writer)
 }

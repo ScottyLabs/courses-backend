@@ -84,7 +84,7 @@ impl From<String> for BuildingRoom {
 impl Display for BuildingRoom {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
-            Self::Specific(building, room) => write!(f, "{} {}", building, room),
+            Self::Specific(building, room) => write!(f, "{building} {room}"),
             _ => write!(f, "{}", self.get_str("display").unwrap_or_default()),
         }
     }
@@ -145,10 +145,10 @@ impl From<String> for Location {
 impl Display for Location {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
-            Self::Other(location) => write!(f, "{}", location),
+            Self::Other(location) => write!(f, "{location}"),
             _ => {
                 let display = self.get_str("display").unwrap_or_default();
-                write!(f, "{}", display)
+                write!(f, "{display}")
             }
         }
     }

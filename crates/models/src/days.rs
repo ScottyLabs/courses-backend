@@ -91,7 +91,7 @@ impl Display for DaySet {
             }
         }
 
-        write!(f, "{}", result)
+        write!(f, "{result}")
     }
 }
 

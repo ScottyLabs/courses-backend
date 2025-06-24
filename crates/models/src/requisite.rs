@@ -101,25 +101,25 @@ impl FromStr for Expr {
         }
 
         // Try to parse as OR expression first (lower precedence)
-        if let Some(or_parts) = split_top_level(input, "or") {
-            if or_parts.len() >= 2 {
-                let mut result = or_parts[0].parse()?;
-                for part in &or_parts[1..] {
-                    result = Expr::Or(Box::new(result), Box::new(part.parse()?));
-                }
-                return Ok(result);
+        if let Some(or_parts) = split_top_level(input, "or")
+            && or_parts.len() >= 2
+        {
+            let mut result = or_parts[0].parse()?;
+            for part in &or_parts[1..] {
+                result = Expr::Or(Box::new(result), Box::new(part.parse()?));
             }
+            return Ok(result);
         }
 
         // Try to parse as AND expression (higher precedence)
-        if let Some(and_parts) = split_top_level(input, "and") {
-            if and_parts.len() >= 2 {
-                let mut result = and_parts[0].parse()?;
-                for part in &and_parts[1..] {
-                    result = Expr::And(Box::new(result), Box::new(part.parse()?));
-                }
-                return Ok(result);
+        if let Some(and_parts) = split_top_level(input, "and")
+            && and_parts.len() >= 2
+        {
+            let mut result = and_parts[0].parse()?;
+            for part in &and_parts[1..] {
+                result = Expr::And(Box::new(result), Box::new(part.parse()?));
             }
+            return Ok(result);
         }
 
         // Check if it's a parenthesized expression
@@ -133,7 +133,7 @@ impl FromStr for Expr {
             return Ok(Expr::Course(input.to_string()));
         }
 
-        Err(ParseError(format!("Failed to parse: {}", input)))
+        Err(ParseError(format!("Failed to parse: {input}")))
     }
 }
 

@@ -65,7 +65,7 @@ async fn main() {
         .into_par_iter()
         .map(|(season, text)| {
             let year = extract_year(&text)
-                .unwrap_or_else(|| panic!("Failed to extract year for {:?}", season));
+                .unwrap_or_else(|| panic!("Failed to extract year for {season:?}"));
             let lines = first_pass(&text);
 
             second_pass(lines, season, year)
@@ -73,6 +73,6 @@ async fn main() {
         .flatten()
         .collect::<Vec<_>>();
 
-    let output = format!("{:#?}", results);
+    let output = format!("{results:#?}");
     Write::write_all(&mut file, output.as_bytes()).expect("Failed to write to file");
 }
