@@ -21,6 +21,15 @@ impl Display for ParseUnitError {
     }
 }
 
+/// Shared logic for `UnitType` and `UnitTypeSimple` to compare units
+fn compare_units(min_a: f32, max_a: f32, min_b: f32, max_b: f32) -> Option<Ordering> {
+    // Order first by minimum value, then by maximum value if min is equal
+    match min_a.partial_cmp(&min_b) {
+        Some(Ordering::Equal) => max_a.partial_cmp(&max_b),
+        other => other,
+    }
+}
+
 /// Represents the number of units a course is worth
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub enum UnitTypeSimple {
@@ -50,11 +59,7 @@ impl UnitTypeSimple {
 
 impl PartialOrd for UnitTypeSimple {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        // Order first by minimum value, then by maximum value if min is equal
-        match self.min_value().partial_cmp(&other.min_value()) {
-            Some(Ordering::Equal) => self.max_value().partial_cmp(&other.max_value()),
-            other => other,
-        }
+        compare_units(self.min_value(), self.max_value(), other.min_value(), other.max_value())
     }
 }
 
@@ -122,11 +127,7 @@ impl UnitType {
 
 impl PartialOrd for UnitType {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        // Order first by minimum value, then by maximum value if min is equal
-        match self.min_value().partial_cmp(&other.min_value()) {
-            Some(Ordering::Equal) => self.max_value().partial_cmp(&other.max_value()),
-            other => other,
-        }
+        compare_units(self.min_value(), self.max_value(), other.min_value(), other.max_value())
     }
 }
 
