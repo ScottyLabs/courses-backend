@@ -4,3 +4,4 @@ members = ["crates/*"]
 
 [workspace.package]
 license = "MIT OR Apache-2.0"
+authors = ["Anish Pallati <apallati@anish.land>"]
