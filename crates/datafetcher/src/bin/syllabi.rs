@@ -14,6 +14,11 @@ const OUTPUT_FILE: &str = "syllabi.csv";
 /// CSV headers
 const CSV_HEADERS: [&str; 5] = ["season", "year", "number", "section", "url"];
 
+/// Hurl script for retrieving file URLs
+const FILE_URLS_SCRIPT: &str = include_str!("../../scripts/file_urls.hurl");
+/// Hurl script for retrieving the final URL
+const FINAL_URL_SCRIPT: &str = include_str!("../../scripts/final_url.hurl");
+
 /// Struct representing a syllabus file with a URL
 #[derive(Debug, Clone, Serialize)]
 struct FileWithUrl {
@@ -179,10 +184,6 @@ fn generate_combinations() -> Vec<(Department, Season, Year)> {
 
 /// Orchestrates the scraping of syllabus files
 fn main() {
-    // Load Hurl scripts
-    let file_urls_script = include_str!("../../scripts/file_urls.hurl");
-    let final_url_script = include_str!("../../scripts/final_url.hurl");
-
     // Set up variables for API authentication
     let mut vars = VariableSet::new();
     insert_variable(&mut vars, "token", CANVAS_ACCESS_TOKEN);
@@ -195,11 +196,11 @@ fn main() {
         .into_par_iter()
         // Get initial file URLs for each department/season/year
         .filter_map(|(department, season, year)| {
-            process_department(department, season, year, &vars, file_urls_script)
+            process_department(department, season, year, &vars, FILE_URLS_SCRIPT)
         })
         .flatten()
         // Get final download URLs for each file
-        .filter_map(|file| get_final_file(file, &vars, final_url_script))
+        .filter_map(|file| get_final_file(file, &vars, FINAL_URL_SCRIPT))
         // Format each file as a CSV record
         .map(|file| {
             vec![
