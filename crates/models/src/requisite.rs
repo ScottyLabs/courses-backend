@@ -24,7 +24,7 @@ impl Expr {
 
     /// Simplifies this expression based on completed courses
     /// - Returns None if the requirement is already satisfied
-    /// - Returns a simplified Expr showing only remaining requirements otherwise
+    /// - Returns a simplified [`Expr`] showing only remaining requirements otherwise
     pub fn simplify(&self, completed_courses: &[String]) -> Option<Expr> {
         match self {
             // For a course node, if it's completed return None (satisfied)

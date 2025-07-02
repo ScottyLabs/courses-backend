@@ -19,12 +19,12 @@ pub struct TimeRange {
 }
 
 impl TimeRange {
-    /// Creates a new `TimeRange` if `begin` is before `end`
+    /// Creates a new [`TimeRange`] if `begin` is before `end`
     pub fn new(begin: NaiveTime, end: NaiveTime) -> Option<Self> {
         (begin < end).then_some(Self { begin, end })
     }
 
-    /// Parses two time strings and creates a `TimeRange` if valid.
+    /// Parses two time strings and creates a [`TimeRange`] if valid.
     /// # Returns
     /// `Some(TimeRange)` if parsing succeeds and `begin` is before `end`
     pub fn from_strings(begin: &str, end: &str) -> Option<Self> {

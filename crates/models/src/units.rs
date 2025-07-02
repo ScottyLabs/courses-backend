@@ -21,7 +21,7 @@ impl Display for ParseUnitError {
     }
 }
 
-/// Shared logic for `UnitType` and `UnitTypeSimple` to compare units
+/// Shared logic for [`UnitType`] and [`UnitTypeSimple`] to compare units
 fn compare_units(min_a: f32, max_a: f32, min_b: f32, max_b: f32) -> Option<Ordering> {
     // Order first by minimum value, then by maximum value if min is equal
     match min_a.partial_cmp(&min_b) {
@@ -59,7 +59,12 @@ impl UnitTypeSimple {
 
 impl PartialOrd for UnitTypeSimple {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        compare_units(self.min_value(), self.max_value(), other.min_value(), other.max_value())
+        compare_units(
+            self.min_value(),
+            self.max_value(),
+            other.min_value(),
+            other.max_value(),
+        )
     }
 }
 
@@ -127,7 +132,12 @@ impl UnitType {
 
 impl PartialOrd for UnitType {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        compare_units(self.min_value(), self.max_value(), other.min_value(), other.max_value())
+        compare_units(
+            self.min_value(),
+            self.max_value(),
+            other.min_value(),
+            other.max_value(),
+        )
     }
 }
 
