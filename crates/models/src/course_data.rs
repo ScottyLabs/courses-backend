@@ -242,11 +242,47 @@ pub struct CourseComponent {
     pub meetings: Vec<Meeting>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CourseNumber(String);
+
+impl FromStr for CourseNumber {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Ensure the string is exactly 5 digits
+        if s.len() == 5 && s.chars().all(|c| c.is_ascii_digit()) {
+            Ok(Self(s.to_string()))
+        } else {
+            Err(())
+        }
+    }
+}
+
+impl From<&str> for CourseNumber {
+    fn from(num: &str) -> Self {
+        Self::from_str(num).unwrap()
+    }
+}
+
+impl From<String> for CourseNumber {
+    fn from(num: String) -> Self {
+        Self::from_str(&num).unwrap()
+    }
+}
+
+impl CourseNumber {
+    // Format the 5-digit number in XX-XXX format
+    pub fn as_full_string(&self) -> String {
+        let num = &self.0;
+        format!("{}-{}", &num[..2], &num[2..])
+    }
+}
+
 /// Represents a course entry from the schedule
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CourseEntry {
     /// Course number (e.g., "15122")
-    pub number: String,
+    pub number: CourseNumber,
     /// Number of units
     pub units: Units,
     /// Lectures and sections for this course
@@ -257,11 +293,9 @@ pub struct CourseEntry {
     pub year: Year,
 }
 
-/// Represents a course object with additional metadata
+/// Represents additional metadata for a course
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct CourseObject {
-    /// The base course entry
-    pub base_course: CourseEntry,
+pub struct CourseMetadata {
     /// Related URLs for the course
     pub related_urls: Vec<String>,
     /// Whether special permission is required to take the course
@@ -278,6 +312,15 @@ pub struct CourseObject {
     pub notes: String,
     /// The course's reservations
     pub reservations: Vec<Reservation>,
+}
+
+/// Represents a course object with additional metadata
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CourseObject {
+    /// The base course entry
+    pub base_course: CourseEntry,
+    /// Additional metadata for the course
+    pub metadata: CourseMetadata,
 }
 
 #[cfg(test)]

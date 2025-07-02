@@ -218,7 +218,7 @@ fn parse_course(lines: &[Line], season: Season, year: Year) -> Option<(CourseEnt
 
     Some((
         CourseEntry {
-            number,
+            number: number.into(),
             units,
             components,
             season,
@@ -301,7 +301,7 @@ mod test {
 
         let expected = vec![
             CourseEntry {
-                number: "48025".to_string(),
+                number: "48025".into(),
                 units: Units::new(3.0),
                 season: Season::Fall,
                 year: Year(2025),
@@ -319,7 +319,7 @@ mod test {
                 }],
             },
             CourseEntry {
-                number: "48104".to_string(),
+                number: "48104".into(),
                 units: Units::VAR,
                 season: Season::Fall,
                 year: Year(2025),
@@ -351,7 +351,7 @@ mod test {
                 ],
             },
             CourseEntry {
-                number: "48214".to_string(),
+                number: "48214".into(),
                 units: Units::new(9.0),
                 season: Season::Fall,
                 year: Year(2025),
@@ -383,7 +383,7 @@ mod test {
                 ],
             },
             CourseEntry {
-                number: "48313".to_string(),
+                number: "48313".into(),
                 units: Units::new(9.0),
                 season: Season::Fall,
                 year: Year(2025),
