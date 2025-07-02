@@ -320,7 +320,7 @@ pub struct CourseObject {
     /// The base course entry
     pub base_course: CourseEntry,
     /// Additional metadata for the course
-    pub metadata: CourseMetadata,
+    pub metadata: Option<CourseMetadata>,
 }
 
 #[cfg(test)]
