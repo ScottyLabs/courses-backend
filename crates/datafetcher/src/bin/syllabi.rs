@@ -87,7 +87,6 @@ fn parse_title(title: &str) -> (String, String) {
 /// * `season` - The season (Fall, Spring, etc.)
 /// * `year` - The academic year
 /// * `vars` - The base variable set with tokens
-/// * `file_urls_script` - The Hurl script to run for retrieving file URLs
 ///
 /// # Returns
 /// `Some(Vec<FileWithUrl>)` if successful, `None` if failed
@@ -96,7 +95,6 @@ fn process_department(
     season: Season,
     year: Year,
     vars: &VariableSet,
-    file_urls_script: &str,
 ) -> Option<Vec<FileWithUrl>> {
     // Create a new variable set with department, season, and year variables
     let mut group_vars = vars.clone();
@@ -105,7 +103,7 @@ fn process_department(
     insert_variable(&mut group_vars, "year", &year.to_string());
 
     // Run the Hurl script to get file URLs
-    let result = match execute_hurl(file_urls_script, &group_vars) {
+    let result = match execute_hurl(FILE_URLS_SCRIPT, &group_vars) {
         Ok(result) if result.success => result,
         Ok(_) => return None,
         Err(e) => {
@@ -135,27 +133,22 @@ fn process_department(
     }
 }
 
-/// Constructs a final FileWithUrl with the actual download URL
+/// Constructs a final [`FileWithUrl`] with the actual download URL
 ///
-/// Takes an initial FileWithUrl with a reference URL and runs a Hurl request
+/// Takes an initial [`FileWithUrl`] with a reference URL and runs a Hurl request
 /// to get the final download URL.
 ///
 /// # Arguments
-/// * `file` - The initial FileWithUrl object
+/// * `file` - The initial [`FileWithUrl`] object
 /// * `vars` - The base variable set with tokens
-/// * `final_url_script` - The Hurl script to run
 ///
 /// # Returns
 /// `Some(FileWithUrl)` with the final URL if successful, `None` otherwise
-fn get_final_file(
-    file: FileWithUrl,
-    vars: &VariableSet,
-    final_url_script: &str,
-) -> Option<FileWithUrl> {
+fn get_final_file(file: FileWithUrl, vars: &VariableSet) -> Option<FileWithUrl> {
     let mut file_vars = vars.clone();
     insert_variable(&mut file_vars, "file_url", &file.url);
 
-    match execute_hurl(final_url_script, &file_vars) {
+    match execute_hurl(FINAL_URL_SCRIPT, &file_vars) {
         Ok(result) if result.success => get_captures(&result).first().and_then(|final_url| {
             let url = final_url.value.to_string();
             (!url.trim().is_empty()).then_some(FileWithUrl { url, ..file })
@@ -164,7 +157,7 @@ fn get_final_file(
     }
 }
 
-/// Generates all combinations of Department, Season, and Year
+/// Generates all combinations of [`Department`], [`Season`], and [`Year`]
 ///
 /// # Returns
 /// A vector of (Department, Season, Year) tuples
@@ -196,11 +189,11 @@ fn main() {
         .into_par_iter()
         // Get initial file URLs for each department/season/year
         .filter_map(|(department, season, year)| {
-            process_department(department, season, year, &vars, FILE_URLS_SCRIPT)
+            process_department(department, season, year, &vars)
         })
         .flatten()
         // Get final download URLs for each file
-        .filter_map(|file| get_final_file(file, &vars, FINAL_URL_SCRIPT))
+        .filter_map(|file| get_final_file(file, &vars))
         // Format each file as a CSV record
         .map(|file| {
             vec![
