@@ -1,7 +1,9 @@
-use std::str::FromStr;
+use std::{ops::Deref, str::FromStr};
+
+use serde::Serialize;
 
 /// Represents a node in the expression tree
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Expr {
     Course(String),
     And(Box<Expr>, Box<Expr>),
@@ -187,9 +189,52 @@ fn split_top_level(input: &str, op: &str) -> Option<Vec<String>> {
     }
 }
 
-/// Parse a requirement string and return a structured expression tree
-pub fn parse_requirements(req_str: &str) -> Result<Expr, ParseError> {
-    req_str.parse()
+/// Represents a courses' prerequisites
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Prerequisites(Option<Expr>);
+
+impl Deref for Prerequisites {
+    type Target = Option<Expr>;
+
+    /// Deref to the inner expression
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl FromStr for Prerequisites {
+    type Err = ParseError;
+
+    /// Parse a requirement string and return a structured expression tree
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let req_str = s.trim();
+
+        if req_str == "None" {
+            Ok(Prerequisites(None))
+        } else {
+            req_str.parse().map(|expr| Prerequisites(Some(expr)))
+        }
+    }
+}
+
+/// Represents a courses' corequisites or cross-listed courses
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Requisites(Vec<String>);
+
+impl FromStr for Requisites {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let req_str = s.trim();
+
+        if req_str == "None" {
+            Ok(Requisites(Vec::new()))
+        } else {
+            let parts = req_str.split(',').map(|s| s.trim().to_string()).collect();
+
+            Ok(Requisites(parts))
+        }
+    }
 }
 
 #[cfg(test)]

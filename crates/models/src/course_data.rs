@@ -1,5 +1,7 @@
 use crate::{
     days::Days,
+    requisite::{Prerequisites, Requisites},
+    reservation::Reservation,
     syllabus_data::{Season, Year},
     units::Units,
 };
@@ -253,6 +255,29 @@ pub struct CourseEntry {
     pub season: Season,
     /// Year that the course is offered
     pub year: Year,
+}
+
+/// Represents a course object with additional metadata
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CourseObject {
+    /// The base course entry
+    pub base_course: CourseEntry,
+    /// Related URLs for the course
+    pub related_urls: Vec<String>,
+    /// Whether special permission is required to take the course
+    pub special_permission: bool,
+    /// Description of the course
+    pub description: String,
+    /// The course's prerequisites
+    pub prerequisites: Prerequisites,
+    /// The course's corequisites
+    pub corequisites: Requisites,
+    /// The course's cross-listed courses
+    pub cross_listed: Requisites,
+    /// Notes for the course
+    pub notes: String,
+    /// The course's reservations
+    pub reservations: Vec<Reservation>,
 }
 
 #[cfg(test)]
