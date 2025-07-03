@@ -165,7 +165,7 @@ impl FromStr for Restriction {
         // Remove the common prefix
         let content = s
             .strip_prefix(PREFIX)
-            .ok_or_else(|| format!("Missing expected prefix: {PREFIX}"))?
+            .ok_or("Missing expected prefix")?
             .trim();
 
         // Try primary major pattern
