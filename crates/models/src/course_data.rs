@@ -293,13 +293,29 @@ pub struct CourseEntry {
     pub year: Year,
 }
 
+/// Represents whether special permission is required to take a course
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Default)]
+pub struct Permission(bool);
+
+impl FromStr for Permission {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+            "yes" => Ok(Self(true)),
+            "no" => Ok(Self(false)),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Represents additional metadata for a course
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CourseMetadata {
     /// Related URLs for the course
     pub related_urls: Vec<String>,
     /// Whether special permission is required to take the course
-    pub special_permission: bool,
+    pub special_permission: Permission,
     /// Description of the course
     pub description: String,
     /// The course's prerequisites
