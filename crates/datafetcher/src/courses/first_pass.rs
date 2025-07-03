@@ -36,13 +36,13 @@ fn is_section_code(s: &str) -> bool {
     first.is_some_and(|c| c.is_ascii_uppercase())
 }
 
-/// Determines which `Line` variant a single line fits into
+/// Determines which [`Line`] variant a single line fits into
 ///
 /// # Arguments
 /// * `line` - A line of text from the input file
 ///
 /// # Returns
-/// * A `Line` enum variant representing the type of line
+/// * A [`Line`] enum variant representing the type of line
 pub fn parse_line(line: &str) -> Line {
     let trimmed = line.trim();
 

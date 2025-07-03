@@ -250,12 +250,12 @@ fn parse_courses(lines: &[Line], season: Season, year: Year) -> Vec<CourseEntry>
 /// This function performs recursive descent on previously typed lines.
 ///
 /// # Arguments
-/// * `lines` - A list of `Line`s from the first pass.
+/// * `lines` - A list of [`Line`]s from the first pass.
 /// * `season` - The season for this SOC snapshot (e.g., Fall).
 /// * `year` - The academic year.
 ///
 /// # Returns
-/// A vector of structured `CourseEntry`s.
+/// A vector of structured [`CourseEntry`]s.
 pub fn second_pass(lines: Vec<Line>, season: Season, year: Year) -> Vec<CourseEntry> {
     parse_courses(&lines, season, year)
 }
