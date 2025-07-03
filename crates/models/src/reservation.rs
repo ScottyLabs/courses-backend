@@ -140,13 +140,18 @@ impl Display for ReservationType {
 /// Represents a course reservation restriction
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Restriction {
-    pub student_type: StudentType,
-    pub restriction_type: ReservationType,
+    pub student_type: Option<StudentType>,
+    pub restriction_type: Option<ReservationType>,
 }
 
 impl Display for Restriction {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        write!(f, "{} {}", self.student_type, self.restriction_type)
+        match (self.student_type.clone(), self.restriction_type.clone()) {
+            (Some(student_type), Some(restriction_type)) => {
+                write!(f, "{student_type} {restriction_type}")
+            }
+            _ => write!(f, "Unknown restriction"),
+        }
     }
 }
 
@@ -170,8 +175,8 @@ impl FromStr for Restriction {
                 .map_err(|_| format!("Unknown major: {major_str}"))?;
 
             return Ok(Restriction {
-                student_type,
-                restriction_type: ReservationType::PrimaryMajor(major),
+                student_type: Some(student_type),
+                restriction_type: Some(ReservationType::PrimaryMajor(major)),
             });
         }
 
@@ -182,8 +187,8 @@ impl FromStr for Restriction {
             // First, try to parse as a known School
             if let Ok(school) = ReservationDepartment::from_str(school_str) {
                 return Ok(Restriction {
-                    student_type,
-                    restriction_type: ReservationType::School(school),
+                    student_type: Some(student_type),
+                    restriction_type: Some(ReservationType::School(school)),
                 });
             }
 
@@ -244,18 +249,18 @@ mod tests {
     fn test_restriction_department_parsing() {
         let restriction =
             Restriction::from_str("Some reservations are for Freshmen in SCS").unwrap();
-        assert_eq!(restriction.student_type, StudentType::Freshmen);
+        assert_eq!(restriction.student_type, Some(StudentType::Freshmen));
         assert_eq!(
             restriction.restriction_type,
-            ReservationType::School(ReservationDepartment::SCS)
+            Some(ReservationType::School(ReservationDepartment::SCS))
         );
 
         let restriction =
             Restriction::from_str("Some reservations are for Students in ECE").unwrap();
-        assert_eq!(restriction.student_type, StudentType::Students);
+        assert_eq!(restriction.student_type, Some(StudentType::Students));
         assert_eq!(
             restriction.restriction_type,
-            ReservationType::School(ReservationDepartment::ECE)
+            Some(ReservationType::School(ReservationDepartment::ECE))
         );
     }
 
@@ -265,33 +270,37 @@ mod tests {
             "Some reservations are for Students with a primary major in INFOSYS",
         )
         .unwrap();
-        assert_eq!(restriction.student_type, StudentType::Students);
+        assert_eq!(restriction.student_type, Some(StudentType::Students));
         assert_eq!(
             restriction.restriction_type,
-            ReservationType::PrimaryMajor(ReservationDepartment::INFOSYS)
+            Some(ReservationType::PrimaryMajor(
+                ReservationDepartment::INFOSYS
+            ))
         );
 
         let restriction =
             Restriction::from_str("Some reservations are for Freshmen with a primary major in BHA")
                 .unwrap();
-        assert_eq!(restriction.student_type, StudentType::Freshmen);
+        assert_eq!(restriction.student_type, Some(StudentType::Freshmen));
         assert_eq!(
             restriction.restriction_type,
-            ReservationType::PrimaryMajor(ReservationDepartment::BHA)
+            Some(ReservationType::PrimaryMajor(ReservationDepartment::BHA))
         );
     }
 
     #[test]
     fn test_restriction_display() {
         let restriction = Restriction {
-            student_type: StudentType::Freshmen,
-            restriction_type: ReservationType::School(ReservationDepartment::SCS),
+            student_type: Some(StudentType::Freshmen),
+            restriction_type: Some(ReservationType::School(ReservationDepartment::SCS)),
         };
         assert_eq!(restriction.to_string(), "Freshmen in SCS");
 
         let restriction = Restriction {
-            student_type: StudentType::Students,
-            restriction_type: ReservationType::PrimaryMajor(ReservationDepartment::INFOSYS),
+            student_type: Some(StudentType::Students),
+            restriction_type: Some(ReservationType::PrimaryMajor(
+                ReservationDepartment::INFOSYS,
+            )),
         };
         assert_eq!(
             restriction.to_string(),
