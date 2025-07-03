@@ -6,6 +6,7 @@ use hurl::{
 use std::{
     fs::{self, File},
     path::Path,
+    str::FromStr,
 };
 
 /// Output directory for data files
@@ -134,6 +135,46 @@ pub fn get_capture_value<'a>(result: &'a HurlResult, capture_name: &'a str) -> O
         .iter()
         .find(|capture| capture.name == capture_name)
         .map(|capture| &capture.value)
+}
+
+/// Gets an optional string value from a [`HurlResult`]
+///
+/// # Arguments
+/// * `result` - The [`HurlResult`] to extract from
+/// * `capture_name` - Name of the capture to find
+///
+/// # Returns
+/// `Some(value)` if found, `None` otherwise
+pub fn get_optional_string_value<'a>(
+    result: &'a HurlResult,
+    capture_name: &'a str,
+) -> Option<String> {
+    get_capture_value(result, capture_name).and_then(|value| match value {
+        Value::String(s) => {
+            let trimmed = s.trim().to_owned();
+            (!trimmed.is_empty() && trimmed != "None").then_some(trimmed)
+        }
+        _ => None,
+    })
+}
+
+/// Gets a parsed struct value from a [`HurlResult`]
+///
+/// # Arguments
+/// * `result` - The [`HurlResult`] to extract from
+/// * `capture_name` - Name of the capture to find
+///
+/// # Returns
+/// The parsed struct value or the default value if not found or parsing fails
+pub fn get_parsed_struct_value<T>(result: &HurlResult, capture_name: &str) -> T
+where
+    T: Default + FromStr,
+{
+    get_capture_value(result, capture_name)
+        .map(|v| v.to_string().trim().to_owned())
+        .unwrap_or_default()
+        .parse()
+        .unwrap_or_else(|_| T::default())
 }
 
 /// Zips two capture lists together
