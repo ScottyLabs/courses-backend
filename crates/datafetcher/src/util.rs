@@ -11,21 +11,6 @@ use std::{
 /// Output directory for data files
 pub const DEFAULT_OUTPUT_DIR: &str = "./data/output";
 
-/// Extracts all captures from a Hurl result
-///
-/// # Arguments
-/// * `result` - The HurlResult containing captures
-///
-/// # Returns
-/// A vector of references to CaptureResult
-pub fn get_captures(result: &HurlResult) -> Vec<&CaptureResult> {
-    result
-        .entries
-        .iter()
-        .flat_map(|e| e.captures.iter())
-        .collect()
-}
-
 /// Inserts a string variable into a VariableSet
 ///
 /// # Arguments
@@ -95,6 +80,45 @@ pub fn create_csv_writer(filename: &str, headers: &[&str]) -> Result<Writer<File
         .map_err(|e| format!("Failed to write CSV headers: {e}"))?;
 
     Ok(writer)
+}
+
+/// Extracts all captures from a Hurl result
+///
+/// # Arguments
+/// * `result` - The HurlResult containing captures
+///
+/// # Returns
+/// A vector of references to CaptureResult
+pub fn get_captures(result: &HurlResult) -> Vec<&CaptureResult> {
+    result
+        .entries
+        .iter()
+        .flat_map(|e| e.captures.iter())
+        .collect()
+}
+
+/// Extracts and trims values from captures by name
+///
+/// # Arguments
+/// * `captures` - A slice of [`CaptureResult`] references
+/// * `name` - The name of the capture to extract
+///
+/// # Returns
+/// An iterator over the trimmed values of the specified capture name
+pub fn extract_trimmed<'a>(
+    captures: &'a [&'a CaptureResult],
+    name: &'a str,
+) -> impl Iterator<Item = String> + 'a {
+    captures
+        .iter()
+        .filter(move |c| c.name == name)
+        .filter_map(|c| match &c.value {
+            Value::String(s) => {
+                let trimmed = s.trim();
+                (!trimmed.is_empty()).then(|| trimmed.to_owned())
+            }
+            _ => None,
+        })
 }
 
 /// Safely gets a capture value from a Hurl result
