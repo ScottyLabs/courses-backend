@@ -9,77 +9,163 @@ use strum::{Display, EnumString};
 /// Represents the schools, departments, majors that course reservations target
 #[derive(Serialize, Debug, Display, Clone, Copy, PartialEq, EnumString)]
 pub enum ReservationDepartment {
-    MCS,
-    SCS,
-    CIT,
-    ISP,
-    DC,
-    TSB,
-    ART,
-    ARC,
-    DRA,
-    DES,
-    BHA,
-    ECE,
-    INFOSYS,
-    MSC,
+    ADS,
     AEM,
+    AI,
+    AIEBMD,
+    AIEESTAP,
+    AIEINI,
+    AIEMEG,
+    AII,
+    ALSLA,
+    ARC,
+    ARCCM,
+    ART,
+    ARTMGMT,
+    ASLA,
+    AUTSCBE,
     BA,
+    BEHAVECO,
+    BHA,
+    BIDA,
     BMD,
+    BPD,
     BSC,
+    BSCCBIO,
+    BTPE,
     BUS,
+    BUSANAL,
     BXA,
+    C00,
     CAS,
     CB,
     CEE,
     CFA,
     CHE,
+    CIT,
+    CIV,
     CMU,
     CMY,
     CNB,
+    COGSCI,
+    COLPIA,
+    COMP,
+    COMPFIN,
+    COSDES,
+    COSPRO,
     CRM,
     CS,
     CST,
+    CV,
+    CW,
+    DATANSCI,
+    DC,
+    DECSCI,
+    DES,
+    DIR,
+    DRA,
+    DRAWRT,
+    ECE,
     ECO,
+    EHPP,
+    ELECMUS,
+    EMSYS,
+    ENARTINT,
     ENG,
+    ENTMGMT,
+    ENVENG,
     EPP,
+    ESDES,
     ETC,
+    ETIM,
+    FILVIM,
+    GCP,
     H00,
     HC,
+    HCAIT,
     HCI,
+    HCP,
     HIS,
     HSS,
     IA,
     ICT,
     III,
+    IIPS,
+    INAP,
+    INFOPVCY,
+    INFOSYS,
     INI,
+    INTRELP,
+    IPM,
     IPS,
     ISH,
     ISM,
+    ISP,
     ISR,
+    ITM,
     LCL,
+    LITCUL,
+    LNGHSS,
     LTI,
+    MCS,
+    MED,
     MEG,
+    MEGRE,
+    MGMT,
+    MGTSCI,
+    MIS,
     ML,
     MLG,
+    MPBP,
+    MPPIA,
+    MPVOI,
+    MSC,
+    MSCORSTA,
     MSE,
     MUS,
+    MUSCOM,
+    MUSCOMP,
+    MUSTEC,
+    NEUROSCI,
     NSI,
     PHI,
     PHY,
     PMP,
+    POLMGMT,
+    PPIA,
+    PPMDA,
+    PPMHNZ,
     PPP,
+    PRE,
+    PRODMGMT,
     PROJECT,
     PSY,
+    PVOI,
+    PW,
+    QBA,
+    QBIOBAD,
+    QBS,
+    QCS,
+    QIS,
     ROB,
+    ROBSYSDV,
     S3D,
+    SCASYS,
+    SCS,
     SDS,
     SE,
+    SM,
+    SOUNDDES,
     STA,
+    STAMACH,
     STU,
+    SUDESAD,
     SV,
     TA,
     TEX,
+    TSB,
+    TW,
+    Z00,
 }
 
 /// Represents different types of students that reservations target
@@ -90,6 +176,9 @@ pub enum StudentType {
     Juniors,
     Seniors,
     Students,
+    GraduateStudents,
+    PhdCandidates,
+    FifthYearStudents,
 }
 
 impl FromStr for StudentType {
@@ -102,6 +191,9 @@ impl FromStr for StudentType {
             "juniors" => Ok(Self::Juniors),
             "seniors" => Ok(Self::Seniors),
             "students" => Ok(Self::Students),
+            "graduate students" => Ok(Self::GraduateStudents),
+            "phd candidates" => Ok(Self::PhdCandidates),
+            "5th yr students" => Ok(Self::FifthYearStudents),
             _ => Err(format!("Unknown student type: {s}")),
         }
     }
@@ -115,6 +207,9 @@ impl Display for StudentType {
             Self::Juniors => write!(f, "Juniors"),
             Self::Seniors => write!(f, "Seniors"),
             Self::Students => write!(f, "Students"),
+            Self::GraduateStudents => write!(f, "Graduate Students"),
+            Self::PhdCandidates => write!(f, "Phd Candidates"),
+            Self::FifthYearStudents => write!(f, "5th YR Students"),
         }
     }
 }
@@ -122,6 +217,8 @@ impl Display for StudentType {
 /// Represents the type of reservation restriction
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum ReservationType {
+    /// Reservation for a specific type of student
+    StudentType,
     /// Reservation for students in a specific school
     School(ReservationDepartment),
     /// Reservation for students with a primary major in a specific major
@@ -131,6 +228,7 @@ pub enum ReservationType {
 impl Display for ReservationType {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
+            Self::StudentType => Ok(()),
             Self::School(school) => write!(f, "in {school}"),
             Self::PrimaryMajor(major) => write!(f, "with a primary major in {major}"),
         }
@@ -159,14 +257,21 @@ impl FromStr for Restriction {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = s.trim();
+        // Remove the common prefix
         const PREFIX: &str = "Some reservations are for ";
 
-        // Remove the common prefix
         let content = s
             .strip_prefix(PREFIX)
             .ok_or("Missing expected prefix")?
             .trim();
+
+        // Remove empty lines and whitespace
+        let s = s
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
 
         // Try primary major pattern
         if let Some((student_type_str, major_str)) = parse_primary_major_pattern(content) {
@@ -193,6 +298,14 @@ impl FromStr for Restriction {
             }
 
             return Err(format!("Unknown school: {school_str}"));
+        }
+
+        // Try just student type pattern
+        if let Ok(student_type) = StudentType::from_str(content) {
+            return Ok(Restriction {
+                student_type: Some(student_type),
+                restriction_type: Some(ReservationType::StudentType),
+            });
         }
 
         Err(format!("Unable to parse reservation: {s}"))
@@ -285,6 +398,39 @@ mod tests {
         assert_eq!(
             restriction.restriction_type,
             Some(ReservationType::PrimaryMajor(ReservationDepartment::BHA))
+        );
+    }
+
+    #[test]
+    fn test_restriction_student_type_parsing() {
+        let restriction =
+            Restriction::from_str("Some reservations are for 5th YR Students").unwrap();
+        assert_eq!(
+            restriction.student_type,
+            Some(StudentType::FifthYearStudents)
+        );
+        assert_eq!(
+            restriction.restriction_type,
+            Some(ReservationType::StudentType)
+        );
+
+        let restriction =
+            Restriction::from_str("Some reservations are for Phd Candidates").unwrap();
+        assert_eq!(restriction.student_type, Some(StudentType::PhdCandidates));
+        assert_eq!(
+            restriction.restriction_type,
+            Some(ReservationType::StudentType)
+        );
+
+        let restriction =
+            Restriction::from_str("Some reservations are for Graduate Students").unwrap();
+        assert_eq!(
+            restriction.student_type,
+            Some(StudentType::GraduateStudents)
+        );
+        assert_eq!(
+            restriction.restriction_type,
+            Some(ReservationType::StudentType)
         );
     }
 
