@@ -270,6 +270,12 @@ impl From<String> for CourseNumber {
     }
 }
 
+impl Display for CourseNumber {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl CourseNumber {
     // Format the 5-digit number in XX-XXX format
     pub fn as_full_string(&self) -> String {
