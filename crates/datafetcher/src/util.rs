@@ -11,10 +11,10 @@ use std::{
 /// Output directory for data files
 pub const DEFAULT_OUTPUT_DIR: &str = "./data/output";
 
-/// Inserts a string variable into a VariableSet
+/// Inserts a string variable into a [`VariableSet`]
 ///
 /// # Arguments
-/// * `vars` - The VariableSet to modify
+/// * `vars` - The [`VariableSet`] to modify
 /// * `key` - The name of the variable
 /// * `value` - The string value to insert
 ///
@@ -32,7 +32,7 @@ pub fn insert_variable(vars: &mut VariableSet, key: &str, value: &str) {
 /// * `vars` - The variables to use
 ///
 /// # Returns
-/// Result containing HurlResult or error message
+/// Result containing [`HurlResult`] or error message
 pub fn execute_hurl(script: &str, vars: &VariableSet) -> Result<HurlResult, String> {
     let runner_opts = RunnerOptionsBuilder::new().build();
     let logger_opts = LoggerOptionsBuilder::new().verbosity(None).build();
@@ -82,13 +82,13 @@ pub fn create_csv_writer(filename: &str, headers: &[&str]) -> Result<Writer<File
     Ok(writer)
 }
 
-/// Extracts all captures from a Hurl result
+/// Extracts all captures from a [`HurlResult`]
 ///
 /// # Arguments
-/// * `result` - The HurlResult containing captures
+/// * `result` - The [`HurlResult`] containing captures
 ///
 /// # Returns
-/// A vector of references to CaptureResult
+/// A vector of references to [`CaptureResult`]
 pub fn get_captures(result: &HurlResult) -> Vec<&CaptureResult> {
     result
         .entries
@@ -121,14 +121,14 @@ pub fn extract_trimmed<'a>(
         })
 }
 
-/// Safely gets a capture value from a Hurl result
+/// Gets a capture value from a [`HurlResult`]
 ///
 /// # Arguments
-/// * `result` - The HurlResult to extract from
+/// * `result` - The [`HurlResult`] to extract from
 /// * `capture_name` - Name of the capture to find
 ///
 /// # Returns
-/// Some(value) if found, None otherwise
+/// `Some(value)` if found, `None` otherwise
 pub fn get_capture_value<'a>(result: &'a HurlResult, capture_name: &'a str) -> Option<&'a Value> {
     get_captures(result)
         .iter()
@@ -139,7 +139,7 @@ pub fn get_capture_value<'a>(result: &'a HurlResult, capture_name: &'a str) -> O
 /// Zips two capture lists together
 ///
 /// # Arguments
-/// * `result` - The HurlResult containing captures
+/// * `result` - The [`HurlResult`] containing captures
 /// * `list1_name` - Name of the first list capture
 /// * `list2_name` - Name of the second list capture
 ///
