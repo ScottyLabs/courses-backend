@@ -3,6 +3,8 @@ use hurl::{
     runner::{self, CaptureResult, HurlResult, RunnerOptionsBuilder, Value, VariableSet},
     util::logger::LoggerOptionsBuilder,
 };
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::{
     fs::{self, File},
     path::Path,
@@ -11,6 +13,11 @@ use std::{
 
 /// Output directory for data files
 pub const DEFAULT_OUTPUT_DIR: &str = "./data/output";
+
+lazy_static! {
+    static ref NEWLINES_AND_SPACES: Regex = Regex::new(r"[\r\n]+\s*").unwrap();
+    static ref WHITESPACE: Regex = Regex::new(r"\s+").unwrap();
+}
 
 /// Inserts a string variable into a [`VariableSet`]
 ///
@@ -152,6 +159,9 @@ pub fn get_optional_string_value<'a>(
     get_capture_value(result, capture_name).and_then(|value| match value {
         Value::String(s) => {
             let trimmed = s.trim().to_owned();
+            let trimmed = NEWLINES_AND_SPACES.replace_all(&trimmed, "");
+            let trimmed = WHITESPACE.replace_all(&trimmed, " ").to_string();
+
             (!trimmed.is_empty() && trimmed != "None").then_some(trimmed)
         }
         _ => None,
