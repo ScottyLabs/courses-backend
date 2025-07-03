@@ -307,7 +307,7 @@ pub struct CourseMetadata {
     /// Whether special permission is required to take the course
     pub special_permission: bool,
     /// Description of the course
-    pub description: String,
+    pub description: Option<String>,
     /// The course's prerequisites
     pub prerequisites: Prerequisites,
     /// The course's corequisites
@@ -315,7 +315,7 @@ pub struct CourseMetadata {
     /// The course's cross-listed courses
     pub crosslisted: Requisites,
     /// Notes for the course
-    pub notes: String,
+    pub notes: Option<String>,
     /// The course's reservations
     pub reservations: Vec<Reservation>,
 }
