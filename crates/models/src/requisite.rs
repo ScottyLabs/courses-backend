@@ -190,7 +190,7 @@ fn split_top_level(input: &str, op: &str) -> Option<Vec<String>> {
 }
 
 /// Represents a courses' prerequisites
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Default)]
 pub struct Prerequisites(Option<Expr>);
 
 impl Deref for Prerequisites {
@@ -218,7 +218,7 @@ impl FromStr for Prerequisites {
 }
 
 /// Represents a courses' corequisites or cross-listed courses
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Default)]
 pub struct Requisites(Vec<String>);
 
 impl FromStr for Requisites {
