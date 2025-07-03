@@ -307,7 +307,7 @@ pub struct CourseMetadata {
     /// The course's corequisites
     pub corequisites: Requisites,
     /// The course's cross-listed courses
-    pub cross_listed: Requisites,
+    pub crosslisted: Requisites,
     /// Notes for the course
     pub notes: String,
     /// The course's reservations
