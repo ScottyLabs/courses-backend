@@ -15,5 +15,5 @@ crosslisted: xpath "string(/html/body/div/div[5]/div[1]/dl/dd)"
 notes: xpath "string(/html/body/div/div[5]/div[2]/dl/dd)"
 
 # reservations
-section: xpath "/html/body/div/div[6]/div/table/tbody/tr/td[1]/text()"
-restriction: xpath "/html/body/div/div[6]/div/table/tbody/tr/td[2]/text()"
+section: xpath "string(//h4[text()='Reservations']/following-sibling::table//tr/td[1])"
+restriction: xpath "string(//h4[text()='Reservations']/following-sibling::table//tr/td[2])"
