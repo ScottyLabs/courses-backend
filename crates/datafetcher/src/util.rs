@@ -5,6 +5,7 @@ use hurl::{
 };
 use lazy_static::lazy_static;
 use regex::Regex;
+use scraper::Html;
 use std::{
     fs::{self, File},
     path::Path,
@@ -105,28 +106,24 @@ pub fn get_captures(result: &HurlResult) -> Vec<&CaptureResult> {
         .collect()
 }
 
-/// Extracts and trims values from captures by name
+/// Extracts the raw HTML body from captures
 ///
 /// # Arguments
-/// * `captures` - A slice of [`CaptureResult`] references
-/// * `name` - The name of the capture to extract
+/// * `captures` - A vector of [`CaptureResult`] references
 ///
 /// # Returns
-/// An iterator over the trimmed values of the specified capture name
-pub fn extract_trimmed<'a>(
-    captures: &'a [&'a CaptureResult],
-    name: &'a str,
-) -> impl Iterator<Item = String> + 'a {
-    captures
+/// The parsed [`Html`] document
+pub fn parse_from_raw_html(captures: Vec<&CaptureResult>) -> Html {
+    let raw_body = captures
         .iter()
-        .filter(move |c| c.name == name)
-        .filter_map(|c| match &c.value {
-            Value::String(s) => {
-                let trimmed = s.trim();
-                (!trimmed.is_empty()).then(|| trimmed.to_owned())
-            }
+        .find(|c| c.name == "raw_body")
+        .and_then(|c| match &c.value {
+            Value::String(s) => Some(s.as_str()),
             _ => None,
         })
+        .unwrap_or("");
+
+    Html::parse_document(raw_body)
 }
 
 /// Gets a capture value from a [`HurlResult`]
