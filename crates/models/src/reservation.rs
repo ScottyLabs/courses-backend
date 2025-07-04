@@ -4,169 +4,6 @@ use std::{
 };
 
 use serde::Serialize;
-use strum::{Display, EnumString};
-
-/// Represents the schools, departments, majors that course reservations target
-#[derive(Serialize, Debug, Display, Clone, Copy, PartialEq, EnumString)]
-pub enum ReservationDepartment {
-    ADS,
-    AEM,
-    AI,
-    AIEBMD,
-    AIEESTAP,
-    AIEINI,
-    AIEMEG,
-    AII,
-    ALSLA,
-    ARC,
-    ARCCM,
-    ART,
-    ARTMGMT,
-    ASLA,
-    AUTSCBE,
-    BA,
-    BEHAVECO,
-    BHA,
-    BIDA,
-    BMD,
-    BPD,
-    BSC,
-    BSCCBIO,
-    BTPE,
-    BUS,
-    BUSANAL,
-    BXA,
-    C00,
-    CAS,
-    CB,
-    CEE,
-    CFA,
-    CHE,
-    CIT,
-    CIV,
-    CMU,
-    CMY,
-    CNB,
-    COGSCI,
-    COLPIA,
-    COMP,
-    COMPFIN,
-    COSDES,
-    COSPRO,
-    CRM,
-    CS,
-    CST,
-    CV,
-    CW,
-    DATANSCI,
-    DC,
-    DECSCI,
-    DES,
-    DIR,
-    DRA,
-    DRAWRT,
-    ECE,
-    ECO,
-    EHPP,
-    ELECMUS,
-    EMSYS,
-    ENARTINT,
-    ENG,
-    ENTMGMT,
-    ENVENG,
-    EPP,
-    ESDES,
-    ETC,
-    ETIM,
-    FILVIM,
-    GCP,
-    H00,
-    HC,
-    HCAIT,
-    HCI,
-    HCP,
-    HIS,
-    HSS,
-    IA,
-    ICT,
-    III,
-    IIPS,
-    INAP,
-    INFOPVCY,
-    INFOSYS,
-    INI,
-    INTRELP,
-    IPM,
-    IPS,
-    ISH,
-    ISM,
-    ISP,
-    ISR,
-    ITM,
-    LCL,
-    LITCUL,
-    LNGHSS,
-    LTI,
-    MCS,
-    MED,
-    MEG,
-    MEGRE,
-    MGMT,
-    MGTSCI,
-    MIS,
-    ML,
-    MLG,
-    MPBP,
-    MPPIA,
-    MPVOI,
-    MSC,
-    MSCORSTA,
-    MSE,
-    MUS,
-    MUSCOM,
-    MUSCOMP,
-    MUSTEC,
-    NEUROSCI,
-    NSI,
-    PHI,
-    PHY,
-    PMP,
-    POLMGMT,
-    PPIA,
-    PPMDA,
-    PPMHNZ,
-    PPP,
-    PRE,
-    PRODMGMT,
-    PROJECT,
-    PSY,
-    PVOI,
-    PW,
-    QBA,
-    QBIOBAD,
-    QBS,
-    QCS,
-    QIS,
-    ROB,
-    ROBSYSDV,
-    S3D,
-    SCASYS,
-    SCS,
-    SDS,
-    SE,
-    SM,
-    SOUNDDES,
-    STA,
-    STAMACH,
-    STU,
-    SUDESAD,
-    SV,
-    TA,
-    TEX,
-    TSB,
-    TW,
-    Z00,
-}
 
 /// Represents different types of students that reservations target
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -220,9 +57,9 @@ pub enum ReservationType {
     /// Reservation for a specific type of student
     StudentType,
     /// Reservation for students in a specific school
-    School(ReservationDepartment),
+    School(String),
     /// Reservation for students with a primary major in a specific major
-    PrimaryMajor(ReservationDepartment),
+    PrimaryMajor(String),
 }
 
 impl Display for ReservationType {
@@ -276,12 +113,10 @@ impl FromStr for Restriction {
         // Try primary major pattern
         if let Some((student_type_str, major_str)) = parse_primary_major_pattern(content) {
             let student_type = StudentType::from_str(student_type_str)?;
-            let major = ReservationDepartment::from_str(major_str)
-                .map_err(|_| format!("Unknown major: {major_str}"))?;
 
             return Ok(Restriction {
                 student_type: Some(student_type),
-                restriction_type: Some(ReservationType::PrimaryMajor(major)),
+                restriction_type: Some(ReservationType::PrimaryMajor(major_str.to_owned())),
             });
         }
 
@@ -289,15 +124,10 @@ impl FromStr for Restriction {
         if let Some((student_type_str, school_str)) = parse_school_pattern(content) {
             let student_type = StudentType::from_str(student_type_str)?;
 
-            // First, try to parse as a known School
-            if let Ok(school) = ReservationDepartment::from_str(school_str) {
-                return Ok(Restriction {
-                    student_type: Some(student_type),
-                    restriction_type: Some(ReservationType::School(school)),
-                });
-            }
-
-            return Err(format!("Unknown school: {school_str}"));
+            return Ok(Restriction {
+                student_type: Some(student_type),
+                restriction_type: Some(ReservationType::School(school_str.to_owned())),
+            });
         }
 
         // Try just student type pattern
@@ -339,7 +169,7 @@ pub struct Reservation {
 
 #[cfg(test)]
 mod tests {
-    use crate::reservation::{ReservationDepartment, ReservationType, Restriction, StudentType};
+    use crate::reservation::{ReservationType, Restriction, StudentType};
     use std::str::FromStr;
 
     #[test]
@@ -365,7 +195,7 @@ mod tests {
         assert_eq!(restriction.student_type, Some(StudentType::Freshmen));
         assert_eq!(
             restriction.restriction_type,
-            Some(ReservationType::School(ReservationDepartment::SCS))
+            Some(ReservationType::School("SCS".to_owned()))
         );
 
         let restriction =
@@ -373,7 +203,7 @@ mod tests {
         assert_eq!(restriction.student_type, Some(StudentType::Students));
         assert_eq!(
             restriction.restriction_type,
-            Some(ReservationType::School(ReservationDepartment::ECE))
+            Some(ReservationType::School("ECE".to_owned()))
         );
     }
 
@@ -386,9 +216,7 @@ mod tests {
         assert_eq!(restriction.student_type, Some(StudentType::Students));
         assert_eq!(
             restriction.restriction_type,
-            Some(ReservationType::PrimaryMajor(
-                ReservationDepartment::INFOSYS
-            ))
+            Some(ReservationType::PrimaryMajor("INFOSYS".to_owned()))
         );
 
         let restriction =
@@ -397,7 +225,7 @@ mod tests {
         assert_eq!(restriction.student_type, Some(StudentType::Freshmen));
         assert_eq!(
             restriction.restriction_type,
-            Some(ReservationType::PrimaryMajor(ReservationDepartment::BHA))
+            Some(ReservationType::PrimaryMajor("BHA".to_owned()))
         );
     }
 
@@ -438,15 +266,13 @@ mod tests {
     fn test_restriction_display() {
         let restriction = Restriction {
             student_type: Some(StudentType::Freshmen),
-            restriction_type: Some(ReservationType::School(ReservationDepartment::SCS)),
+            restriction_type: Some(ReservationType::School("SCS".to_owned())),
         };
         assert_eq!(restriction.to_string(), "Freshmen in SCS");
 
         let restriction = Restriction {
             student_type: Some(StudentType::Students),
-            restriction_type: Some(ReservationType::PrimaryMajor(
-                ReservationDepartment::INFOSYS,
-            )),
+            restriction_type: Some(ReservationType::PrimaryMajor("INFOSYS".to_owned())),
         };
         assert_eq!(
             restriction.to_string(),
