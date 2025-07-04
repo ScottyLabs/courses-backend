@@ -142,7 +142,7 @@ fn process_course_details(course: CourseEntry) -> CourseObject {
         Ok(result) if result.success => result,
         Ok(_) => {
             return CourseObject {
-                base_course: course,
+                course,
                 metadata: None,
             };
         }
@@ -154,7 +154,7 @@ fn process_course_details(course: CourseEntry) -> CourseObject {
                 course.year
             );
             return CourseObject {
-                base_course: course,
+                course,
                 metadata: None,
             };
         }
@@ -181,7 +181,7 @@ fn process_course_details(course: CourseEntry) -> CourseObject {
     };
 
     CourseObject {
-        base_course: course,
+        course,
         metadata: Some(metadata),
     }
 }

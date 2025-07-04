@@ -324,7 +324,7 @@ pub struct CourseMetadata {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CourseObject {
     /// The base course entry
-    pub base_course: CourseEntry,
+    pub course: CourseEntry,
     /// Additional metadata for the course
     pub metadata: Option<CourseMetadata>,
 }
