@@ -83,7 +83,7 @@ pub fn parse_line(line: &str) -> Line {
             time_start,
             time_end,
             building_room,
-            location,
+            campus,
             instructors,
             ..,
         ] if Units::from_str(units).is_ok() => Line::PrimaryCourseComponent {
@@ -93,7 +93,7 @@ pub fn parse_line(line: &str) -> Line {
             time_start: time_start.to_string(),
             time_end: time_end.to_string(),
             building_room: building_room.to_string(),
-            location: location.to_string(),
+            campus: campus.to_string(),
             instructors: instructors.to_string(),
         },
 
@@ -104,7 +104,7 @@ pub fn parse_line(line: &str) -> Line {
             time_start,
             time_end,
             building_room,
-            location,
+            campus,
             instructors,
             ..,
         ] if is_section_code(section) => Line::SecondaryCourseComponent {
@@ -113,26 +113,26 @@ pub fn parse_line(line: &str) -> Line {
             time_start: time_start.to_string(),
             time_end: time_end.to_string(),
             building_room: building_room.to_string(),
-            location: location.to_string(),
+            campus: campus.to_string(),
             instructors: instructors.to_string(),
         },
 
-        // AdditionalMeeting: days + times + building + location
-        [days, time_start, time_end, building_room, location, ..] => Line::AdditionalMeeting {
+        // AdditionalMeeting: days + times + building + campus
+        [days, time_start, time_end, building_room, campus, ..] => Line::AdditionalMeeting {
             days: days.to_string(),
             time_start: time_start.to_string(),
             time_end: time_end.to_string(),
             building_room: building_room.to_string(),
-            location: location.to_string(),
+            campus: campus.to_string(),
         },
 
-        // AdditionalMeeting with missing location
+        // AdditionalMeeting with missing campus
         [days, time_start, time_end, building_room, ..] => Line::AdditionalMeeting {
             days: days.to_string(),
             time_start: time_start.to_string(),
             time_end: time_end.to_string(),
             building_room: building_room.to_string(),
-            location: "Unknown Location".to_string(),
+            campus: "Unknown Location".to_owned(),
         },
 
         // ComponentTitle: short string that doesn't match other formats
@@ -201,7 +201,7 @@ mod test {
                 time_start: "12:30PM".into(),
                 time_end: "01:50PM".into(),
                 building_room: "MM A14".into(),
-                location: "Pittsburgh, Pennsylvania".into(),
+                campus: "Pittsburgh, Pennsylvania".into(),
                 instructors: "Workinger".into(),
             },
             Line::CourseHeader {
@@ -215,7 +215,7 @@ mod test {
                 time_start: "10:00AM".into(),
                 time_end: "10:50AM".into(),
                 building_room: "CFA A9".into(),
-                location: "Pittsburgh, Pennsylvania".into(),
+                campus: "Pittsburgh, Pennsylvania".into(),
                 instructors: "Holmes".into(),
             },
             Line::SecondaryCourseComponent {
@@ -224,7 +224,7 @@ mod test {
                 time_start: "10:00AM".into(),
                 time_end: "10:50AM".into(),
                 building_room: "CFA A9".into(),
-                location: "Pittsburgh, Pennsylvania".into(),
+                campus: "Pittsburgh, Pennsylvania".into(),
                 instructors: "Holmes".into(),
             },
             Line::CourseHeader {
@@ -238,7 +238,7 @@ mod test {
                 time_start: "".into(),
                 time_end: "".into(),
                 building_room: "DNM DNM".into(),
-                location: "Pittsburgh, Pennsylvania".into(),
+                campus: "Pittsburgh, Pennsylvania".into(),
                 instructors: "Bard".into(),
             },
             Line::SecondaryCourseComponent {
@@ -247,7 +247,7 @@ mod test {
                 time_start: "10:00AM".into(),
                 time_end: "10:50AM".into(),
                 building_room: "MM 303".into(),
-                location: "Pittsburgh, Pennsylvania".into(),
+                campus: "Pittsburgh, Pennsylvania".into(),
                 instructors: "Bard".into(),
             },
             Line::SecondaryCourseHeader {
@@ -263,7 +263,7 @@ mod test {
                 time_start: "11:00AM".into(),
                 time_end: "12:20PM".into(),
                 building_room: "TBD TBD".into(),
-                location: "Pittsburgh, Pennsylvania".into(),
+                campus: "Pittsburgh, Pennsylvania".into(),
                 instructors: "Sindi".into(),
             },
             Line::ComponentTitle("New Pedogogies".into()),
@@ -274,7 +274,7 @@ mod test {
                 time_start: "11:00AM".into(),
                 time_end: "12:20PM".into(),
                 building_room: "TBA".into(),
-                location: "Pittsburgh, Pennsylvania".into(),
+                campus: "Pittsburgh, Pennsylvania".into(),
                 instructors: "Stone".into(),
             },
         ];

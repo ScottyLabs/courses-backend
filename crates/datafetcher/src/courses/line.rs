@@ -30,8 +30,8 @@ pub enum Line {
         time_start: String,    // To become `TimeRange.begin`
         time_end: String,      // To become `TimeRange.end`
         building_room: String, // To become `BuildingRoom`
-        location: String,      // To become `Location`
-        instructors: String,   // To become `Meeting.instructors`
+        campus: String,
+        instructors: String, // To become `Meeting.instructors`
     },
     /// Any additional components of a course. These will always share the same number of units
     /// as the `PrimaryCourseComponent` they are associated with.
@@ -41,7 +41,7 @@ pub enum Line {
         time_start: String,
         time_end: String,
         building_room: String,
-        location: String,
+        campus: String,
         instructors: String,
     },
     /// An additional meeting time for a `*CourseComponent`. These will always share the same title,
@@ -51,7 +51,7 @@ pub enum Line {
         time_start: String,
         time_end: String,
         building_room: String,
-        location: String,
+        campus: String,
     },
     /// A blank line or whitespace-only
     Empty,

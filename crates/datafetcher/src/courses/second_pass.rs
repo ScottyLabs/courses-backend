@@ -12,13 +12,13 @@ fn parse_meetings(
     time_start: String,
     time_end: String,
     building_room: String,
-    location: String,
+    campus: String,
 ) -> (Vec<Meeting>, &[Line]) {
     let mut meetings = vec![Meeting {
         days: days.into(),
         time: TimeRange::from_strings(&time_start, &time_end),
         bldg_room: building_room.into(),
-        location: location.into(),
+        campus,
         instructors: instructors.clone().into(),
     }];
 
@@ -30,7 +30,7 @@ fn parse_meetings(
             time_start,
             time_end,
             building_room,
-            location,
+            campus,
         },
         rest @ ..,
     ] = remaining
@@ -39,7 +39,7 @@ fn parse_meetings(
             days: days.clone().into(),
             time: TimeRange::from_strings(time_start, time_end),
             bldg_room: building_room.clone().into(),
-            location: location.clone().into(),
+            campus: campus.to_owned(),
             instructors: instructors.clone().into(),
         });
 
@@ -62,7 +62,7 @@ fn parse_component(
                 time_start,
                 time_end,
                 building_room,
-                location,
+                campus,
                 instructors,
             },
             rest @ ..,
@@ -74,7 +74,7 @@ fn parse_component(
                 time_start.clone(),
                 time_end.clone(),
                 building_room.clone(),
-                location.clone(),
+                campus.clone(),
             );
 
             (
@@ -96,7 +96,7 @@ fn parse_component(
                 time_start,
                 time_end,
                 building_room,
-                location,
+                campus,
                 instructors,
             },
             rest @ ..,
@@ -108,7 +108,7 @@ fn parse_component(
                 time_start.clone(),
                 time_end.clone(),
                 building_room.clone(),
-                location.clone(),
+                campus.clone(),
             );
 
             (
@@ -265,7 +265,7 @@ mod test {
     use crate::courses::{first_pass::parse_line, second_pass::second_pass};
     use models::{
         course_data::{
-            BuildingRoom, ComponentType, CourseComponent, CourseEntry, Location, Meeting, TimeRange,
+            BuildingRoom, ComponentType, CourseComponent, CourseEntry, Meeting, TimeRange,
         },
         days::{DaySet, Days},
         syllabus_data::{Season, Year},
@@ -313,7 +313,7 @@ mod test {
                         days: Days::Days(DaySet::THURSDAY),
                         time: Some(TimeRange::from_strings("12:30PM", "01:50PM").unwrap()),
                         bldg_room: BuildingRoom::Specific("MM".to_string(), "A14".to_string()),
-                        location: Location::Pittsburgh,
+                        campus: "Pittsburgh, Pennsylvania".to_owned(),
                         instructors: "Workinger".into(),
                     }],
                 }],
@@ -332,7 +332,7 @@ mod test {
                             days: Days::Days(DaySet::MONDAY | DaySet::WEDNESDAY),
                             time: Some(TimeRange::from_strings("10:00AM", "10:50AM").unwrap()),
                             bldg_room: BuildingRoom::Specific("CFA".to_string(), "A9".to_string()),
-                            location: Location::Pittsburgh,
+                            campus: "Pittsburgh, Pennsylvania".to_owned(),
                             instructors: "Holmes".into(),
                         }],
                     },
@@ -344,7 +344,7 @@ mod test {
                             days: Days::Days(DaySet::MONDAY | DaySet::WEDNESDAY),
                             time: Some(TimeRange::from_strings("10:00AM", "10:50AM").unwrap()),
                             bldg_room: BuildingRoom::Specific("CFA".to_string(), "A9".to_string()),
-                            location: Location::Pittsburgh,
+                            campus: "Pittsburgh, Pennsylvania".to_owned(),
                             instructors: "Holmes".into(),
                         }],
                     },
@@ -364,7 +364,7 @@ mod test {
                             days: Days::TBA,
                             time: None,
                             bldg_room: BuildingRoom::DoesNotMeet,
-                            location: Location::Pittsburgh,
+                            campus: "Pittsburgh, Pennsylvania".to_owned(),
                             instructors: "Bard".into(),
                         }],
                     },
@@ -376,7 +376,7 @@ mod test {
                             days: Days::Days(DaySet::MONDAY),
                             time: Some(TimeRange::from_strings("10:00AM", "10:50AM").unwrap()),
                             bldg_room: BuildingRoom::Specific("MM".to_string(), "303".to_string()),
-                            location: Location::Pittsburgh,
+                            campus: "Pittsburgh, Pennsylvania".to_owned(),
                             instructors: "Bard".into(),
                         }],
                     },
@@ -396,7 +396,7 @@ mod test {
                             days: Days::Days(DaySet::TUESDAY | DaySet::THURSDAY),
                             time: Some(TimeRange::from_strings("11:00AM", "12:20PM").unwrap()),
                             bldg_room: BuildingRoom::ToBeDetermined,
-                            location: Location::Pittsburgh,
+                            campus: "Pittsburgh, Pennsylvania".to_owned(),
                             instructors: "Sindi".into(),
                         }],
                     },
@@ -408,7 +408,7 @@ mod test {
                             days: Days::Days(DaySet::MONDAY | DaySet::WEDNESDAY),
                             time: Some(TimeRange::from_strings("11:00AM", "12:20PM").unwrap()),
                             bldg_room: BuildingRoom::ToBeAnnounced,
-                            location: Location::Pittsburgh,
+                            campus: "Pittsburgh, Pennsylvania".to_owned(),
                             instructors: "Stone".into(),
                         }],
                     },

@@ -92,70 +92,6 @@ impl Display for BuildingRoom {
     }
 }
 
-/// Represents a location where a meeting can occur
-#[derive(Debug, Clone, PartialEq, Serialize, EnumProperty, EnumIter)]
-pub enum Location {
-    #[strum(props(display = "Pittsburgh, Pennsylvania"))]
-    Pittsburgh,
-
-    #[strum(props(display = "Doha, Qatar"))]
-    Doha,
-
-    #[strum(props(display = "New York, New York"))]
-    NewYork,
-
-    #[strum(props(display = "San Jose, California"))]
-    SanJose,
-
-    #[strum(props(display = "Los Angeles, California"))]
-    LosAngeles,
-
-    #[strum(props(display = "Lisbon, Portugal"))]
-    Lisbon,
-
-    #[strum(props(display = "Kigali, Rwanda"))]
-    Kigali,
-
-    #[strum(props(display = "Washington, District of Columbia"))]
-    Washington,
-
-    #[strum(props(display = "Unknown Location"))]
-    Unknown,
-
-    /// Any other location
-    #[strum(props(display = ""))]
-    Other(String),
-}
-
-impl FromStr for Location {
-    type Err = ();
-
-    fn from_str(location: &str) -> Result<Self, Self::Err> {
-        Self::iter()
-            .find(|variant| variant.get_str("display") == Some(location))
-            .or_else(|| Some(Self::Other(location.to_string())))
-            .ok_or(())
-    }
-}
-
-impl From<String> for Location {
-    fn from(location: String) -> Self {
-        Self::from_str(&location).unwrap()
-    }
-}
-
-impl Display for Location {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        match self {
-            Self::Other(location) => write!(f, "{location}"),
-            _ => {
-                let display = self.get_str("display").unwrap_or_default();
-                write!(f, "{display}")
-            }
-        }
-    }
-}
-
 /// Represents the instructor(s) for a course
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Instructors(Option<Vec<String>>);
@@ -189,7 +125,7 @@ impl From<String> for Instructors {
     }
 }
 
-/// Represents a single meeting with location and instructor
+/// Represents a single meeting with campus and instructor
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Meeting {
     /// Days the meeting occurs
@@ -198,8 +134,8 @@ pub struct Meeting {
     pub time: Option<TimeRange>,
     /// Building and room
     pub bldg_room: BuildingRoom,
-    /// Location (campus)
-    pub location: Location,
+    /// CMU Campus
+    pub campus: String,
     /// Instructor(s) for this specific meeting
     pub instructors: Instructors,
 }
@@ -429,35 +365,6 @@ mod test {
         assert_eq!(
             BuildingRoom::Specific("GHC".to_string(), "4102".to_string()).to_string(),
             "GHC 4102"
-        );
-    }
-
-    #[test]
-    fn test_location_from_str() {
-        // Test known locations
-        assert!(matches!(
-            Location::from_str("Pittsburgh, Pennsylvania").unwrap(),
-            Location::Pittsburgh
-        ));
-        assert!(matches!(
-            Location::from_str("Doha, Qatar").unwrap(),
-            Location::Doha
-        ));
-
-        // Test other location
-        if let Location::Other(loc) = Location::from_str("Adelaide, Australia").unwrap() {
-            assert_eq!(loc, "Adelaide, Australia");
-        } else {
-            panic!("Expected Location::Other variant");
-        }
-    }
-
-    #[test]
-    fn test_location_display() {
-        assert_eq!(Location::Pittsburgh.to_string(), "Pittsburgh, Pennsylvania");
-        assert_eq!(
-            Location::Other("Adelaide, Australia".to_string()).to_string(),
-            "Adelaide, Australia"
         );
     }
 }
