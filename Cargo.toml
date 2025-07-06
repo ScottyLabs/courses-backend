@@ -8,8 +8,3 @@ authors = ["Anish Pallati <apallati@anish.land>"]
 
 [workspace.dependencies]
 dotenv_codegen = "0.15.0"
-sea-orm = { version = "1.1.13", features = [
-    "sqlx-postgres",
-    "runtime-tokio-rustls",
-    "macros",
-] }

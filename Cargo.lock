@@ -874,6 +874,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04d2cd9c18b9f454ed67da600630b021a8a80bf33f8c95896ab33aaf1c26b728"
 
 [[package]]
+name = "database"
+version = "0.1.0"
+dependencies = [
+ "models",
+ "sea-orm",
+]
+
+[[package]]
 name = "datafetcher"
 version = "0.1.0"
 dependencies = [
@@ -887,7 +895,6 @@ dependencies = [
  "regex",
  "reqwest",
  "scraper",
- "sea-orm",
  "serde",
  "tokio",
 ]
@@ -2288,7 +2295,6 @@ name = "models"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "sea-orm",
  "serde",
  "strum 0.27.1",
 ]
@@ -3594,7 +3600,6 @@ dependencies = [
  "dotenv_codegen",
  "env_logger",
  "log",
- "sea-orm",
  "tokio",
  "tower",
  "tower-oauth2-resource-server",
