@@ -10,6 +10,7 @@ use sea_orm::EnumIter;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter, Result as FmtResult},
+    ops::Deref,
     str::FromStr,
 };
 use strum::{EnumProperty, IntoEnumIterator};
@@ -101,6 +102,15 @@ impl Display for BuildingRoom {
 /// Represents the instructor(s) for a course
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Instructors(Option<Vec<String>>);
+
+impl Deref for Instructors {
+    type Target = Option<Vec<String>>;
+
+    /// Deref to the inner expression
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl FromStr for Instructors {
     type Err = ();
