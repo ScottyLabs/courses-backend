@@ -68,7 +68,9 @@ impl FromStr for BuildingRoom {
 
     fn from_str(bldg_room: &str) -> Result<Self, Self::Err> {
         Self::iter()
-            .find(|v| v.get_str("parse") == Some(bldg_room))
+            .find(|v| {
+                v.get_str("parse") == Some(bldg_room) || v.get_str("display") == Some(bldg_room)
+            })
             .or_else(|| {
                 // Split into building and room, defaulting to empty string if part is missing
                 let mut parts = bldg_room.split_whitespace();
@@ -374,5 +376,20 @@ mod test {
             BuildingRoom::Specific("GHC".to_string(), "4102".to_string()).to_string(),
             "GHC 4102"
         );
+    }
+
+    #[test]
+    fn test_buildingroom_round_trip() {
+        for building_room in vec![
+            BuildingRoom::ToBeAnnounced,
+            BuildingRoom::ToBeDetermined,
+            BuildingRoom::DoesNotMeet,
+            BuildingRoom::OffPitt,
+            BuildingRoom::Remote,
+            BuildingRoom::Specific("GHC".to_string(), "4102".to_string()),
+        ] {
+            let s = building_room.to_string();
+            assert_eq!(BuildingRoom::from_str(&s).unwrap(), building_room);
+        }
     }
 }
