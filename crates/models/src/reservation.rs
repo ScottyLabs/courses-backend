@@ -4,9 +4,10 @@ use std::{
 };
 
 use serde::Serialize;
+use strum::EnumIter;
 
 /// Represents different types of students that reservations target
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, EnumIter)]
 pub enum StudentType {
     Freshmen,
     Sophomores,
@@ -169,6 +170,8 @@ pub struct Reservation {
 
 #[cfg(test)]
 mod tests {
+    use sea_orm::Iterable;
+
     use crate::reservation::{ReservationType, Restriction, StudentType};
     use std::str::FromStr;
 
@@ -186,6 +189,15 @@ mod tests {
             StudentType::from_str("Seniors").unwrap(),
             StudentType::Seniors
         );
+    }
+
+    #[test]
+    fn test_student_type_round_trip() {
+        for student_type in StudentType::iter() {
+            let s = student_type.to_string();
+            let parsed = StudentType::from_str(&s).unwrap();
+            assert_eq!(student_type, parsed);
+        }
     }
 
     #[test]
