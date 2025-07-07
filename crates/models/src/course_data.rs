@@ -6,12 +6,16 @@ use crate::{
     units::Units,
 };
 use chrono::NaiveTime;
-use serde::Serialize;
+use sea_orm::EnumIter;
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter, Result as FmtResult},
     str::FromStr,
 };
-use strum::{EnumIter, EnumProperty, IntoEnumIterator};
+use strum::{EnumProperty, IntoEnumIterator};
+
+#[cfg(feature = "database")]
+use sea_orm::DeriveActiveEnum;
 
 /// Represents a time range for a meeting
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -141,9 +145,13 @@ pub struct Meeting {
 }
 
 /// Type of course component
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, EnumIter)]
+#[cfg_attr(feature = "database", derive(DeriveActiveEnum))]
+#[cfg_attr(feature = "database", sea_orm(rs_type = "String", db_type = "Text"))]
 pub enum ComponentType {
+    #[cfg_attr(feature = "database", sea_orm(string_value = "Lecture"))]
     Lecture,
+    #[cfg_attr(feature = "database", sea_orm(string_value = "Section"))]
     Section,
 }
 
