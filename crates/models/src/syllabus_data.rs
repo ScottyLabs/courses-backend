@@ -1,9 +1,7 @@
 use chrono::{Datelike, Utc};
 use serde::Serialize;
 use std::{
-    fmt::{Display as FmtDisplay, Formatter, Result as FmtResult},
-    num::ParseIntError,
-    str::FromStr,
+    fmt::{Display as FmtDisplay, Formatter, Result as FmtResult}, num::ParseIntError, ops::Deref, str::FromStr
 };
 use strum::{
     AsRefStr, Display, EnumIter, EnumProperty, EnumString, IntoEnumIterator, IntoStaticStr,
@@ -44,6 +42,14 @@ impl Year {
     pub fn all() -> Vec<Year> {
         let current_year = Utc::now().year() as u16;
         (2018..=current_year).map(Year).collect()
+    }
+}
+
+impl Deref for Year {
+    type Target = u16;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
