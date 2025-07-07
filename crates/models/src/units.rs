@@ -515,4 +515,19 @@ mod tests {
         assert_eq!(Units::VAR.to_string(), "VAR");
         assert_eq!(Units::Value(UnitType::Single(9.0)).to_string(), "9");
     }
+
+    #[test]
+    fn test_display_round_trip() {
+        for unit in [
+            Units::Value(UnitType::Single(3.0)),
+            Units::Value(UnitType::Range(6.0, 12.0)),
+            Units::Value(UnitType::Multi(vec![
+                UnitTypeSimple::Single(3.0),
+                UnitTypeSimple::Range(6.0, 12.0),
+            ])),
+            Units::VAR,
+        ] {
+            assert_eq!(unit, unit.to_string().parse::<Units>().unwrap());
+        }
+    }
 }

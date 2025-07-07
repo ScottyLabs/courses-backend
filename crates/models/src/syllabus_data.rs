@@ -180,6 +180,14 @@ mod tests {
     }
 
     #[test]
+    fn test_season_round_trip() {
+        for season in Season::all() {
+            let s = season.as_str();
+            assert_eq!(Season::from_str(s).unwrap(), season);
+        }
+    }
+
+    #[test]
     fn test_year_display() {
         assert_eq!(Year(2020).to_string(), "20");
         assert_eq!(Year(2023).to_string(), "23");
