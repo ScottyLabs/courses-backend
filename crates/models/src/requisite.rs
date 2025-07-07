@@ -1,9 +1,11 @@
+use serde::{Deserialize, Serialize};
 use std::{ops::Deref, str::FromStr};
 
-use serde::Serialize;
+#[cfg(feature = "database")]
+use sea_orm::Value;
 
 /// Represents a node in the expression tree
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Expr {
     Course(String),
     And(Box<Expr>, Box<Expr>),
@@ -186,6 +188,60 @@ fn split_top_level(input: &str, op: &str) -> Option<Vec<String>> {
         Some(result)
     } else {
         None
+    }
+}
+
+#[cfg(feature = "database")]
+impl sea_orm::sea_query::ValueType for Expr {
+    fn try_from(v: Value) -> Result<Self, sea_orm::sea_query::ValueTypeErr> {
+        match v {
+            Value::String(Some(s)) => {
+                serde_json::from_str(&s).map_err(|_| sea_orm::sea_query::ValueTypeErr)
+            }
+            _ => Err(sea_orm::sea_query::ValueTypeErr),
+        }
+    }
+
+    fn type_name() -> String {
+        "Expr".to_string()
+    }
+
+    fn array_type() -> sea_orm::sea_query::ArrayType {
+        sea_orm::sea_query::ArrayType::String
+    }
+
+    fn column_type() -> sea_orm::sea_query::ColumnType {
+        sea_orm::sea_query::ColumnType::Text
+    }
+}
+
+#[cfg(feature = "database")]
+impl From<Expr> for Value {
+    fn from(expr: Expr) -> Self {
+        Value::String(Some(Box::new(serde_json::to_string(&expr).unwrap())))
+    }
+}
+
+#[cfg(feature = "database")]
+impl sea_orm::TryGetable for Expr {
+    fn try_get_by<I: sea_orm::ColIdx>(
+        res: &sea_orm::QueryResult,
+        index: I,
+    ) -> Result<Self, sea_orm::TryGetError> {
+        let val: String = res.try_get_by(index)?;
+
+        serde_json::from_str(&val).map_err(|e| {
+            sea_orm::TryGetError::DbErr(sea_orm::DbErr::Type(format!(
+                "Failed to deserialize Expr: {e}"
+            )))
+        })
+    }
+}
+
+#[cfg(feature = "database")]
+impl sea_orm::sea_query::Nullable for Expr {
+    fn null() -> Value {
+        Value::String(None)
     }
 }
 
