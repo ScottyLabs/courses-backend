@@ -143,6 +143,15 @@ pub enum Days {
     TBA,
 }
 
+impl Display for Days {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            Self::Days(days) => write!(f, "{days}"),
+            Self::TBA => write!(f, "TBA"),
+        }
+    }
+}
+
 impl FromStr for Days {
     type Err = ();
 
@@ -163,7 +172,7 @@ impl From<String> for Days {
 
 #[cfg(test)]
 mod test {
-    use crate::days::DaySet;
+    use crate::days::{DaySet, Days};
     use std::str::FromStr;
 
     #[test]
@@ -199,5 +208,11 @@ mod test {
 
         let weekdays = DaySet::WEEKDAYS;
         assert_eq!(weekdays.to_string(), "MTWRF");
+    }
+
+    #[test]
+    fn test_days_round_trip() {
+        let days = Days::from_str("MWF").unwrap();
+        assert_eq!(days.to_string(), "MWF");
     }
 }
