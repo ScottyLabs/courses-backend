@@ -402,4 +402,16 @@ mod test {
             assert_eq!(BuildingRoom::from_str(&s).unwrap(), building_room);
         }
     }
+
+    #[test]
+    fn test_course_number_round_trip() {
+        for course_number in [
+            CourseNumber::from_str("21628").unwrap(),
+            CourseNumber::from_str("21355").unwrap(),
+            CourseNumber::from_str("21373").unwrap(),
+        ] {
+            let s = course_number.to_string();
+            assert_eq!(CourseNumber::from_str(&s).unwrap(), course_number);
+        }
+    }
 }
