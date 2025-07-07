@@ -7,9 +7,6 @@ edition = "2024"
 path = "src/lib.rs"
 
 [dependencies]
-models = { path = "../models" }
-sea-orm = { version = "1.1.13", features = [
-    "sqlx-postgres",
-    "runtime-tokio-rustls",
-    "macros",
-] }
+models = { path = "../models", features = ["database"] }
+sea-orm = { workspace = true }
+serde = { workspace = true }
