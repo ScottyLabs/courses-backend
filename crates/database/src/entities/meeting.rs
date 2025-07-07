@@ -8,7 +8,7 @@ pub struct Model {
     pub id: Uuid,
     pub component_id: Uuid,
     pub days_pattern: String, // e.g. "MWF"
-    pub time_start: Option<Time>,
+    pub time_begin: Option<Time>,
     pub time_end: Option<Time>,
     pub bldg_room: String, // e.g. "GHC 4102"
     pub campus: String,
