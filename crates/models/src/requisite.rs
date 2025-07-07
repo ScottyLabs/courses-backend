@@ -221,6 +221,20 @@ impl FromStr for Prerequisites {
 #[derive(Debug, Clone, PartialEq, Serialize, Default)]
 pub struct Requisites(Vec<String>);
 
+impl Deref for Requisites {
+    type Target = Vec<String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<Vec<String>> for Requisites {
+    fn from(courses: Vec<String>) -> Self {
+        Requisites(courses)
+    }
+}
+
 impl FromStr for Requisites {
     type Err = ParseError;
 
