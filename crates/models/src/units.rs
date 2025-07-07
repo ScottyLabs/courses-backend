@@ -517,7 +517,7 @@ mod tests {
     }
 
     #[test]
-    fn test_display_round_trip() {
+    fn test_units_round_trip() {
         for unit in [
             Units::Value(UnitType::Single(3.0)),
             Units::Value(UnitType::Range(6.0, 12.0)),
