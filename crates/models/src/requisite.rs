@@ -249,12 +249,9 @@ impl sea_orm::sea_query::Nullable for Expr {
 #[derive(Debug, Clone, PartialEq, Serialize, Default)]
 pub struct Prerequisites(Option<Expr>);
 
-impl Deref for Prerequisites {
-    type Target = Option<Expr>;
-
-    /// Deref to the inner expression
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl Prerequisites {
+    pub fn into_inner(self) -> Option<Expr> {
+        self.0
     }
 }
 
