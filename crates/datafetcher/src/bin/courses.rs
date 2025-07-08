@@ -1,7 +1,7 @@
 use datafetcher::{
     courses::{first_pass::first_pass, second_pass::second_pass},
     util::{
-        DEFAULT_OUTPUT_DIR, ensure_dir, execute_hurl, get_capture_value, get_captures,
+        create_output_file, execute_hurl, get_capture_value, get_captures,
         get_optional_string_value, get_parsed_struct_value, insert_variable, parse_from_raw_html,
     },
 };
@@ -15,7 +15,7 @@ use models::{
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use reqwest::Client;
 use scraper::{Html, Selector};
-use std::{collections::HashMap, fs::File, io::Write, path::Path, str::FromStr};
+use std::{collections::HashMap, io::Write, str::FromStr};
 
 /// Output file name
 const OUTPUT_FILE: &str = "courses.txt";
@@ -189,11 +189,7 @@ fn process_course_details(course: CourseEntry) -> CourseObject {
 /// Orchestrates the scraping of course details
 #[tokio::main]
 async fn main() {
-    ensure_dir(DEFAULT_OUTPUT_DIR).unwrap();
-
-    let path = Path::new(DEFAULT_OUTPUT_DIR).join(OUTPUT_FILE);
-    let mut file = File::create(path).expect("Failed to create output file");
-
+    let mut file = create_output_file(OUTPUT_FILE).unwrap();
     let client = Client::new();
 
     // Build futures for downloading each season's data
@@ -235,5 +231,6 @@ async fn main() {
         .collect::<Vec<_>>();
 
     let output = format!("{results:#?}");
-    Write::write_all(&mut file, output.as_bytes()).expect("Failed to write to file");
+    file.write_all(output.as_bytes())
+        .expect("Failed to write to file");
 }

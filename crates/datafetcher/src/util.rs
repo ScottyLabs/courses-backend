@@ -1,4 +1,3 @@
-use csv::Writer;
 use hurl::{
     runner::{self, CaptureResult, HurlResult, RunnerOptionsBuilder, Value, VariableSet},
     util::logger::LoggerOptionsBuilder,
@@ -67,28 +66,18 @@ pub fn ensure_dir(dir_path: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Creates a CSV writer for the specified file
+/// Creates an output file in the default output directory
 ///
 /// # Arguments
-/// * `output_dir` - Directory to create the file in
-/// * `filename` - Name of the CSV file
-/// * `headers` - Column headers for the CSV
+/// * `filename` - Name of the output file
 ///
 /// # Returns
-/// Result containing the CSV writer or error message
-pub fn create_csv_writer(filename: &str, headers: &[&str]) -> Result<Writer<File>, String> {
+/// Result containing the file handle or error message
+pub fn create_output_file(filename: &str) -> Result<File, String> {
     ensure_dir(DEFAULT_OUTPUT_DIR)?;
 
     let path = Path::new(DEFAULT_OUTPUT_DIR).join(filename);
-    let file =
-        File::create(path).map_err(|e| format!("Failed to create CSV file '{filename}': {e}"))?;
-
-    let mut writer = Writer::from_writer(file);
-    writer
-        .write_record(headers)
-        .map_err(|e| format!("Failed to write CSV headers: {e}"))?;
-
-    Ok(writer)
+    File::create(path).map_err(|e| format!("Failed to create output file '{filename}': {e}"))
 }
 
 /// Extracts all captures from a [`HurlResult`]
