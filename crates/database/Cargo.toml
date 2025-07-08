@@ -8,6 +8,7 @@ path = "src/lib.rs"
 
 [dependencies]
 chrono = { workspace = true }
+dotenv_codegen = { workspace = true }
 models = { path = "../models", features = ["database"] }
 sea-orm = { workspace = true }
 serde = { workspace = true }
