@@ -15,6 +15,10 @@ RUN cargo chef cook --release --recipe-path recipe.json
 
 # Build application
 COPY . ./
-RUN cargo build --release
+RUN cargo build --release --package server
 
-CMD ["./target/release/server"]
+FROM debian:bookworm-slim AS runtime
+WORKDIR /app
+COPY --from=builder /app/target/release/server /app/server
+
+CMD ["./server"]
