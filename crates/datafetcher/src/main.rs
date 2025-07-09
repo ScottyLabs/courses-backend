@@ -1,8 +1,10 @@
+use database::{db::create_connection, services::course::CourseService};
 use datafetcher::{
     courses::{first_pass::first_pass, second_pass::second_pass},
+    syllabi::create_syllabus_map,
     util::{
-        create_output_file, execute_hurl, get_capture_value, get_captures,
-        get_optional_string_value, get_parsed_struct_value, insert_variable, parse_from_raw_html,
+        execute_hurl, get_capture_value, get_captures, get_optional_string_value,
+        get_parsed_struct_value, insert_variable, parse_from_raw_html,
     },
 };
 use futures::future::join_all;
@@ -15,13 +17,11 @@ use models::{
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use reqwest::Client;
 use scraper::{Html, Selector};
-use std::{collections::HashMap, io::Write, str::FromStr};
-
-/// Output file name
-const OUTPUT_FILE: &str = "courses.txt";
+use std::{collections::HashMap, str::FromStr};
+use tokio::{join, task};
 
 /// Hurl script for retrieving course details
-const COURSE_DETAILS_SCRIPT: &str = include_str!("../../scripts/course_details.hurl");
+const COURSE_DETAILS_SCRIPT: &str = include_str!("../scripts/course_details.hurl");
 
 /// Retrieves the year from the course data text
 ///
@@ -189,48 +189,59 @@ fn process_course_details(course: CourseEntry) -> CourseObject {
 /// Orchestrates the scraping of course details
 #[tokio::main]
 async fn main() {
-    let mut file = create_output_file(OUTPUT_FILE).unwrap();
-    let client = Client::new();
+    let db = create_connection()
+        .await
+        .expect("Failed to connect to database");
 
-    // Build futures for downloading each season's data
-    let futures = Season::all().into_iter().map(|season| {
-        let client = client.clone();
-        async move {
-            let url = format!(
-                "https://enr-apps.as.cmu.edu/assets/SOC/sched_layout_{}.dat",
-                season.as_full_str()
-            );
+    let syllabus_future = task::spawn_blocking(create_syllabus_map);
+    let course_objs_future = async {
+        let client = Client::new();
 
-            let text = client
-                .get(&url)
-                .send()
-                .await
-                .expect("Request failed")
-                .text()
-                .await
-                .expect("Failed to read body");
+        // Build futures for downloading each season's data
+        let futures = Season::all().into_iter().map(|season| {
+            let client = client.clone();
+            async move {
+                let url = format!(
+                    "https://enr-apps.as.cmu.edu/assets/SOC/sched_layout_{}.dat",
+                    season.as_full_str()
+                );
 
-            (season, text)
-        }
-    });
+                let text = client
+                    .get(&url)
+                    .send()
+                    .await
+                    .expect("Request failed")
+                    .text()
+                    .await
+                    .expect("Failed to read body");
 
-    // Download all and parse in parallel
-    let downloaded = join_all(futures).await;
-    let results = downloaded
-        .into_par_iter()
-        .map(|(season, text)| {
-            let year = extract_year(&text)
-                .unwrap_or_else(|| panic!("Failed to extract year for {season:?}"));
-            let lines = first_pass(&text);
+                (season, text)
+            }
+        });
 
-            second_pass(lines, season, year)
-        })
-        .flatten()
-        .into_par_iter()
-        .map(process_course_details)
-        .collect::<Vec<_>>();
+        // Download all and parse in parallel
+        join_all(futures)
+            .await
+            .into_par_iter()
+            .map(|(season, text)| {
+                let year = extract_year(&text)
+                    .unwrap_or_else(|| panic!("Failed to extract year for {season:?}"));
+                let lines = first_pass(&text);
 
-    let output = format!("{results:#?}");
-    file.write_all(output.as_bytes())
-        .expect("Failed to write to file");
+                second_pass(lines, season, year)
+            })
+            .flatten()
+            .into_par_iter()
+            .map(process_course_details)
+            .collect::<Vec<_>>()
+    };
+
+    // Fetch syllabi and course objects concurrently
+    let (syllabus_result, course_objs) = join!(syllabus_future, course_objs_future);
+    let syllabus_map = syllabus_result.expect("create_syllabus_map panicked");
+
+    // Save courses to the database
+    CourseService::save_courses(&db, course_objs, syllabus_map)
+        .await
+        .expect("Failed to save courses to database");
 }

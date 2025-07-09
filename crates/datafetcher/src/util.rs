@@ -5,14 +5,7 @@ use hurl::{
 use lazy_static::lazy_static;
 use regex::Regex;
 use scraper::Html;
-use std::{
-    fs::{self, File},
-    path::Path,
-    str::FromStr,
-};
-
-/// Output directory for data files
-pub const DEFAULT_OUTPUT_DIR: &str = "./data/output";
+use std::str::FromStr;
 
 lazy_static! {
     static ref NEWLINES_AND_SPACES: Regex = Regex::new(r"[\r\n]+\s*").unwrap();
@@ -47,37 +40,6 @@ pub fn execute_hurl(script: &str, vars: &VariableSet) -> Result<HurlResult, Stri
 
     runner::run(script, None, &runner_opts, vars, &logger_opts)
         .map_err(|e| format!("Hurl execution failed: {e}"))
-}
-
-/// Ensures a directory exists, creating it if necessary
-///
-/// # Arguments
-/// * `dir_path` - Path to the directory
-///
-/// # Returns
-/// Result indicating success or detailed error
-pub fn ensure_dir(dir_path: &str) -> Result<(), String> {
-    let path = Path::new(dir_path);
-    if !path.exists() {
-        fs::create_dir_all(path)
-            .map_err(|e| format!("Failed to create directory '{dir_path}': {e}"))?;
-    }
-
-    Ok(())
-}
-
-/// Creates an output file in the default output directory
-///
-/// # Arguments
-/// * `filename` - Name of the output file
-///
-/// # Returns
-/// Result containing the file handle or error message
-pub fn create_output_file(filename: &str) -> Result<File, String> {
-    ensure_dir(DEFAULT_OUTPUT_DIR)?;
-
-    let path = Path::new(DEFAULT_OUTPUT_DIR).join(filename);
-    File::create(path).map_err(|e| format!("Failed to create output file '{filename}': {e}"))
 }
 
 /// Extracts all captures from a [`HurlResult`]
@@ -219,15 +181,5 @@ mod tests {
             vars.get("test").map(|v| v.value()),
             Some(Value::String(_))
         ));
-    }
-
-    #[test]
-    fn test_ensure_dir() {
-        let test_dir = format!("{}/test_dir", std::env::temp_dir().to_string_lossy());
-        let result = ensure_dir(&test_dir);
-        assert!(result.is_ok());
-
-        // Clean up
-        let _ = fs::remove_dir(&test_dir);
     }
 }
