@@ -1,6 +1,7 @@
 {
     "files.readonlyInclude": {
         "**/Cargo.lock": true,
+        "crates/database/src/entities/**": true,
     },
     "editor.formatOnSave": true,
     "rust-analyzer.check.overrideCommand": [
