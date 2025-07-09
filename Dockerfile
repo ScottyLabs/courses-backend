@@ -3,6 +3,14 @@ FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 # Create and change to the app directory
 WORKDIR /app
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libxml2-dev \
+    libclang-dev \
+    clang \
+    && rm -rf /var/lib/apt/lists/*
+
 FROM chef AS planner
 COPY . ./
 RUN cargo chef prepare --recipe-path recipe.json
