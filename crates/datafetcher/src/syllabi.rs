@@ -1,12 +1,8 @@
 use crate::util::{execute_hurl, get_captures, insert_variable, zip_captures};
-use dotenv_codegen::dotenv;
 use hurl::runner::VariableSet;
 use models::syllabus_data::{Department, Season, SyllabusMap, Year};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::collections::HashMap;
-
-/// Canvas API access token retrieved from environment variables
-const CANVAS_ACCESS_TOKEN: &str = dotenv!("CANVAS_ACCESS_TOKEN");
 
 /// Hurl script for retrieving file URLs
 const FILE_URLS_SCRIPT: &str = include_str!("../scripts/file_urls.hurl");
@@ -171,9 +167,14 @@ fn generate_combinations() -> Vec<(Department, Season, Year)> {
 
 /// Orchestrates the scraping of syllabus files
 pub fn create_syllabus_map() -> SyllabusMap {
+    dotenvy::dotenv().ok();
+
+    let canvas_access_token = std::env::var("CANVAS_ACCESS_TOKEN")
+        .expect("CANVAS_ACCESS_TOKEN environment variable must be set");
+
     // Set up variables for API authentication
     let mut vars = VariableSet::new();
-    insert_variable(&mut vars, "token", CANVAS_ACCESS_TOKEN);
+    insert_variable(&mut vars, "token", &canvas_access_token);
 
     // Process all department/season/year combinations in parallel
     generate_combinations()

@@ -3,7 +3,6 @@ mod routes;
 mod utils;
 
 use doc::ApiDoc;
-use dotenv_codegen::dotenv;
 use log::info;
 use routes::{auth, root};
 use tower::ServiceBuilder;
@@ -13,14 +12,16 @@ use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_swagger_ui::SwaggerUi;
 
-const OIDC_ISSUER_URL: &str = dotenv!("OIDC_ISSUER_URL");
-
 #[tokio::main]
 async fn main() {
     env_logger::init();
+    dotenvy::dotenv().ok();
+
+    let oidc_issuer_url =
+        std::env::var("OIDC_ISSUER_URL").expect("OIDC_ISSUER_URL environment variable must be set");
 
     let oauth2_resource_server = <OAuth2ResourceServer>::builder()
-        .issuer_url(OIDC_ISSUER_URL)
+        .issuer_url(oidc_issuer_url)
         .build()
         .await
         .expect("Failed to build OAuth2ResourceServer");
