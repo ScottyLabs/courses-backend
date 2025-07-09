@@ -13,7 +13,7 @@ Copy the `.env.example` file to `.env`.
 
 ## Running
 
-In this directory, use `cargo run --bin <name>`, where name is one of `datafetcher | server`. Before running the server, make sure to check its [README](./crates/server/README.md).
+In this directory, use `cargo run --bin <name>`, where name is one of `datafetcher | server`.
 
 ## Database
 

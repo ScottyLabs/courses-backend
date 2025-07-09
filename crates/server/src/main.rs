@@ -13,12 +13,6 @@ use utoipa::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_swagger_ui::SwaggerUi;
 
-#[cfg(feature = "tls")]
-use {
-    axum_server::{Handle, tls_rustls::RustlsConfig},
-    std::net::SocketAddr,
-};
-
 const OIDC_ISSUER_URL: &str = dotenv!("OIDC_ISSUER_URL");
 
 #[tokio::main]
@@ -43,43 +37,12 @@ async fn main() {
         .split_for_parts();
 
     let app = router.merge(SwaggerUi::new("/swagger").url("/openapi.json", ApiDoc::openapi()));
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
-    #[cfg(feature = "tls")]
-    {
-        // Load TLS configuration
-        let cert_path =
-            std::env::var("TLS_CERT_PATH").unwrap_or("certs/localhost+2.pem".to_string());
-        let key_path =
-            std::env::var("TLS_KEY_PATH").unwrap_or("certs/localhost+2-key.pem".to_string());
+    info!("Running axum on http://localhost:3000");
 
-        let config = RustlsConfig::from_pem_file(cert_path, key_path)
-            .await
-            .expect("Failed to load TLS configuration");
-
-        let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-        info!("Running axum on https://localhost:3000");
-
-        // Create server handle for graceful shutdown
-        let handle = Handle::new();
-        let shutdown_handle = handle.clone();
-        tokio::spawn(shutdown_signal(shutdown_handle));
-
-        // Bind with TLS configuration
-        axum_server::bind_rustls(addr, config)
-            .handle(handle) // axum_server does not support axum's .with_graceful_shutdown
-            .serve(app.into_make_service())
-            .await
-            .unwrap();
-    }
-
-    #[cfg(not(feature = "tls"))]
-    {
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-        info!("Running axum on http://localhost:3000");
-
-        axum::serve(listener, app)
-            .with_graceful_shutdown(shutdown_signal())
-            .await
-            .unwrap();
-    }
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
 }
