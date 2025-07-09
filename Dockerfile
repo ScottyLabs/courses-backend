@@ -27,6 +27,13 @@ RUN cargo build --release --package server
 
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
-COPY --from=builder /app/target/release/server /app/server
 
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libxml2 \
+    libssl3 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/target/release/server /app/server
 CMD ["./server"]
