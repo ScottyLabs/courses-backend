@@ -17,7 +17,7 @@ use models::{
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use reqwest::Client;
 use scraper::{Html, Selector};
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, str::FromStr, time::Instant};
 use tokio::{join, task};
 
 /// Hurl script for retrieving course details
@@ -189,18 +189,34 @@ fn process_course_details(course: CourseEntry) -> CourseObject {
 /// Orchestrates the scraping of course details
 #[tokio::main]
 async fn main() {
+    let overall_start = Instant::now();
+
+    println!("Creating database connection...");
     let db = create_connection()
         .await
         .expect("Failed to connect to database");
 
-    let syllabus_future = task::spawn_blocking(create_syllabus_map);
+    println!("Starting data fetching...");
+
+    let syllabus_future = task::spawn_blocking(|| {
+        println!("Fetching syllabus data...");
+        let start = Instant::now();
+        let result = create_syllabus_map();
+        println!("Syllabus data fetched in {:?}", start.elapsed());
+        result
+    });
+
     let course_objs_future = async {
+        println!("Fetching course data...");
+
+        let start = Instant::now();
         let client = Client::new();
 
         // Build futures for downloading each season's data
         let futures = Season::all().into_iter().map(|season| {
             let client = client.clone();
             async move {
+                println!("Downloading data for season: {season:?}");
                 let url = format!(
                     "https://enr-apps.as.cmu.edu/assets/SOC/sched_layout_{}.dat",
                     season.as_full_str()
@@ -215,33 +231,82 @@ async fn main() {
                     .await
                     .expect("Failed to read body");
 
+                println!("Downloaded {} bytes for season {:?}", text.len(), season);
                 (season, text)
             }
         });
 
         // Download all and parse in parallel
-        join_all(futures)
-            .await
+        let raw_data = join_all(futures).await;
+        println!("All season data downloaded in {:?}", start.elapsed());
+
+        println!("Parsing course data...");
+        let parse_start = Instant::now();
+
+        let course_entries = raw_data
             .into_par_iter()
             .map(|(season, text)| {
                 let year = extract_year(&text)
                     .unwrap_or_else(|| panic!("Failed to extract year for {season:?}"));
                 let lines = first_pass(&text);
+                let courses = second_pass(lines, season, year);
 
-                second_pass(lines, season, year)
+                println!(
+                    "Parsed {} courses for {} {}",
+                    courses.len(),
+                    season.as_str(),
+                    year
+                );
+                courses
             })
             .flatten()
+            .collect::<Vec<_>>();
+
+        println!(
+            "Parsed {} total courses in {:?}",
+            course_entries.len(),
+            parse_start.elapsed()
+        );
+
+        println!("Processing course details...");
+        let details_start = Instant::now();
+
+        let course_objs = course_entries
             .into_par_iter()
             .map(process_course_details)
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+
+        println!("Processed course details in {:?}", details_start.elapsed());
+        println!(
+            "Total course data fetching completed in {:?}",
+            start.elapsed()
+        );
+
+        course_objs
     };
 
     // Fetch syllabi and course objects concurrently
+    println!("Waiting for syllabus and course data...");
     let (syllabus_result, course_objs) = join!(syllabus_future, course_objs_future);
     let syllabus_map = syllabus_result.expect("create_syllabus_map panicked");
 
+    println!("Starting database save operation...");
+    let save_start = Instant::now();
+
     // Save courses to the database
-    CourseService::save_courses(&db, course_objs, syllabus_map)
-        .await
-        .expect("Failed to save courses to database");
+    match CourseService::save_courses(&db, course_objs, syllabus_map).await {
+        Ok(course_ids) => {
+            println!(
+                "Successfully saved {} courses to database in {:?}",
+                course_ids.len(),
+                save_start.elapsed()
+            );
+        }
+        Err(e) => {
+            eprintln!("Failed to save courses to database: {e}");
+            std::process::exit(1);
+        }
+    }
+
+    println!("Total operation completed in {:?}", overall_start.elapsed());
 }
