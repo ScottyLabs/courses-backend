@@ -5,7 +5,7 @@ mod utils;
 use doc::ApiDoc;
 use dotenv_codegen::dotenv;
 use log::info;
-use routes::{auth, health};
+use routes::{auth, root};
 use tower::ServiceBuilder;
 use tower_oauth2_resource_server::server::OAuth2ResourceServer;
 use utils::shutdown::shutdown_signal;
@@ -26,10 +26,10 @@ async fn main() {
         .expect("Failed to build OAuth2ResourceServer");
 
     let protected_routes = OpenApiRouter::new()
-        .routes(routes!(auth::root))
+        .routes(routes!(auth::auth))
         .layer(ServiceBuilder::new().layer(oauth2_resource_server.into_layer()));
 
-    let public_routes = OpenApiRouter::new().routes(routes!(health::health));
+    let public_routes = OpenApiRouter::new().routes(routes!(root::root));
 
     let (router, _api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .merge(protected_routes)
