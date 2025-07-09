@@ -4,22 +4,75 @@ use models::{
     syllabus_data::SyllabusMap,
 };
 use sea_orm::{ActiveValue::Set, DatabaseTransaction, TransactionTrait, prelude::*};
+use std::collections::HashMap;
 
 pub struct CourseService;
 
 impl CourseService {
+    /// The number of courses to save in a single batch
+    const BATCH_SIZE: usize = 50;
+
     pub async fn save_courses(
         db: &DatabaseConnection,
         course_objs: Vec<CourseObject>,
         syllabus_map: SyllabusMap,
     ) -> Result<Vec<Uuid>, DbErr> {
+        let total_courses = course_objs.len();
+        println!(
+            "Starting to save {} courses in batches of {}",
+            total_courses,
+            Self::BATCH_SIZE
+        );
+
+        let mut all_course_ids = Vec::with_capacity(total_courses);
+
+        // Process courses in batches
+        for (batch_idx, batch) in course_objs.chunks(Self::BATCH_SIZE).enumerate() {
+            let batch_start = batch_idx * Self::BATCH_SIZE;
+            let batch_end = std::cmp::min(batch_start + Self::BATCH_SIZE, total_courses);
+
+            println!(
+                "Processing batch {}/{}: courses {}-{}",
+                batch_idx + 1,
+                total_courses.div_ceil(Self::BATCH_SIZE),
+                batch_start + 1,
+                batch_end
+            );
+
+            let batch_ids = Self::save_course_batch(db, batch.to_vec(), &syllabus_map).await?;
+            all_course_ids.extend(batch_ids);
+
+            println!(
+                "Completed batch {}, {} courses processed so far",
+                batch_idx + 1,
+                all_course_ids.len()
+            );
+        }
+
+        println!("Successfully saved all {total_courses} courses");
+        Ok(all_course_ids)
+    }
+
+    async fn save_course_batch(
+        db: &DatabaseConnection,
+        course_objs: Vec<CourseObject>,
+        syllabus_map: &SyllabusMap,
+    ) -> Result<Vec<Uuid>, DbErr> {
         let txn = db.begin().await?;
         let mut course_ids = Vec::with_capacity(course_objs.len());
 
-        for course_obj in course_objs {
-            match Self::save_course(course_obj, &syllabus_map, &txn).await {
+        // Pre-load all instructors to avoid N+1 queries
+        let instructor_cache = Self::build_instructor_cache(&txn, &course_objs).await?;
+
+        for (idx, course_obj) in course_objs.into_iter().enumerate() {
+            if idx.is_multiple_of(10) {
+                println!("  Saving course {} in current batch", idx + 1);
+            }
+
+            match Self::save_course(course_obj, syllabus_map, &txn, &instructor_cache).await {
                 Ok(id) => course_ids.push(id),
                 Err(e) => {
+                    eprintln!("Error saving course: {e}");
                     txn.rollback().await.ok();
                     return Err(e);
                 }
@@ -30,10 +83,66 @@ impl CourseService {
         Ok(course_ids)
     }
 
+    /// Build a cache of all instructors to avoid N+1 queries
+    async fn build_instructor_cache(
+        txn: &DatabaseTransaction,
+        course_objs: &[CourseObject],
+    ) -> Result<HashMap<String, Uuid>, DbErr> {
+        // Collect all unique instructor names
+        let mut instructor_names = std::collections::HashSet::new();
+
+        for course_obj in course_objs {
+            for component in &course_obj.course.components {
+                for meeting in &component.meetings {
+                    if let Some(instructors) = meeting.instructors.as_ref() {
+                        for instructor in instructors {
+                            instructor_names.insert(instructor.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        println!(
+            "  Building cache for {} unique instructors",
+            instructor_names.len()
+        );
+
+        // Fetch existing instructors
+        let existing_instructors: Vec<instructors::Model> = instructors::Entity::find()
+            .filter(instructors::Column::Name.is_in(instructor_names.clone()))
+            .all(txn)
+            .await?;
+
+        let mut cache = HashMap::new();
+        for instructor in existing_instructors {
+            cache.insert(instructor.name.clone(), instructor.id);
+            instructor_names.remove(&instructor.name);
+        }
+
+        // Create new instructors for ones that don't exist
+        for new_instructor_name in instructor_names {
+            let new_id = Uuid::new_v4();
+            let new_instructor = instructors::ActiveModel {
+                id: Set(new_id),
+                name: Set(new_instructor_name.clone()),
+            };
+
+            instructors::Entity::insert(new_instructor)
+                .exec(txn)
+                .await?;
+
+            cache.insert(new_instructor_name, new_id);
+        }
+
+        Ok(cache)
+    }
+
     async fn save_course(
         course_obj: CourseObject,
         syllabus_map: &SyllabusMap,
         txn: &DatabaseTransaction,
+        instructor_cache: &HashMap<String, Uuid>,
     ) -> Result<Uuid, DbErr> {
         let course_model = Self::course_to_active_model(&course_obj);
         let course_result = courses::Entity::insert(course_model).exec(txn).await?;
@@ -79,35 +188,16 @@ impl CourseService {
                 let meeting_result = meetings::Entity::insert(meeting_model).exec(txn).await?;
                 let meeting_id = meeting_result.last_insert_id;
 
-                // Save instructors for this meeting
+                // Save instructors for this meeting using the cache
                 for instructor in meeting.instructors.as_ref().unwrap_or(&vec![]) {
-                    // Check if instructor already exists by name
-                    let existing = instructors::Entity::find()
-                        .filter(instructors::Column::Name.eq(instructor))
-                        .one(txn)
-                        .await?;
-
-                    let instructor_id = match existing {
-                        Some(model) => model.id,
-                        None => {
-                            // Insert new instructor
-                            let new_id = Uuid::new_v4();
-                            let new_instructor = instructors::ActiveModel {
-                                id: Set(new_id),
-                                name: Set(instructor.to_owned()),
-                            };
-                            instructors::Entity::insert(new_instructor)
-                                .exec(txn)
-                                .await?;
-
-                            new_id
-                        }
-                    };
+                    let instructor_id = instructor_cache.get(instructor).ok_or_else(|| {
+                        DbErr::Custom(format!("Instructor {instructor} not found in cache"))
+                    })?;
 
                     // Create a many-to-many link between instructor and meeting
                     let link = instructor_meetings::ActiveModel {
                         id: Set(Uuid::new_v4()),
-                        instructor_id: Set(instructor_id),
+                        instructor_id: Set(*instructor_id),
                         meeting_id: Set(meeting_id),
                     };
 
@@ -150,7 +240,7 @@ impl CourseService {
                 .metadata
                 .as_ref()
                 .and_then(|m| m.prerequisites.clone().into_inner())
-                .map(|expr| serde_json::to_string(&expr).unwrap())),
+                .and_then(|expr| serde_json::to_string(&expr).ok())), // Handle serialization errors gracefully
 
             // For corequisites and crosslisted, use the same behavior as related URLs
             corequisites: Set(course_obj
