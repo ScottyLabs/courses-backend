@@ -1,14 +1,22 @@
 use chrono::{Datelike, Utc};
 use serde::Serialize;
 use std::{
-    fmt::{Display as FmtDisplay, Formatter, Result as FmtResult}, num::ParseIntError, ops::Deref, str::FromStr
+    collections::HashMap,
+    fmt::{Display as FmtDisplay, Formatter, Result as FmtResult},
+    hash::Hash,
+    num::ParseIntError,
+    ops::Deref,
+    str::FromStr,
 };
 use strum::{
     AsRefStr, Display, EnumIter, EnumProperty, EnumString, IntoEnumIterator, IntoStaticStr,
 };
 
+/// Type alias for a map that associates course metadata with file URLs
+pub type SyllabusMap = HashMap<(Year, Season, String, String), String>;
+
 #[derive(
-    Debug, Clone, Copy, PartialEq, Serialize, EnumString, EnumIter, AsRefStr, EnumProperty,
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, EnumString, EnumIter, AsRefStr, EnumProperty,
 )]
 pub enum Season {
     #[strum(serialize = "F", props(full = "fall"))]
@@ -35,7 +43,7 @@ impl Season {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 pub struct Year(pub u16);
 
 impl Year {
