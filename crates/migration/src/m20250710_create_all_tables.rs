@@ -206,49 +206,45 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
-        // Create FCE evaluations table
+        // Create FCE table
         manager
             .create_table(
                 Table::create()
-                    .table(FceEvaluations::Table)
+                    .table(Evaluations::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(FceEvaluations::Id)
+                        ColumnDef::new(Evaluations::Id)
                             .uuid()
                             .not_null()
                             .primary_key(),
                     )
-                    .col(
-                        ColumnDef::new(FceEvaluations::ComponentId)
-                            .uuid()
-                            .not_null(),
-                    )
-                    .col(ColumnDef::new(FceEvaluations::InstructorId).uuid())
-                    .col(ColumnDef::new(FceEvaluations::CourseLevel).string())
-                    .col(ColumnDef::new(FceEvaluations::TotalStudents).small_unsigned())
-                    .col(ColumnDef::new(FceEvaluations::NumResponses).small_unsigned())
+                    .col(ColumnDef::new(Evaluations::ComponentId).uuid().not_null())
+                    .col(ColumnDef::new(Evaluations::InstructorId).uuid())
+                    .col(ColumnDef::new(Evaluations::CourseLevel).string())
+                    .col(ColumnDef::new(Evaluations::TotalStudents).small_unsigned())
+                    .col(ColumnDef::new(Evaluations::NumResponses).small_unsigned())
                     // Evaluation ratings (stored as decimals)
-                    .col(ColumnDef::new(FceEvaluations::HoursPerWeek).decimal())
-                    .col(ColumnDef::new(FceEvaluations::InterestInStudentLearning).decimal())
-                    .col(ColumnDef::new(FceEvaluations::ClearlyExplainRequirements).decimal())
-                    .col(ColumnDef::new(FceEvaluations::ClearLearningObjectives).decimal())
-                    .col(ColumnDef::new(FceEvaluations::InstructorProvidesFeedback).decimal())
-                    .col(ColumnDef::new(FceEvaluations::DemonstrateImportance).decimal())
-                    .col(ColumnDef::new(FceEvaluations::ExplainsSubjectMatter).decimal())
-                    .col(ColumnDef::new(FceEvaluations::ShowRespectForStudents).decimal())
-                    .col(ColumnDef::new(FceEvaluations::OverallTeachingRate).decimal())
-                    .col(ColumnDef::new(FceEvaluations::OverallCourseRate).decimal())
+                    .col(ColumnDef::new(Evaluations::HoursPerWeek).decimal())
+                    .col(ColumnDef::new(Evaluations::InterestInStudentLearning).decimal())
+                    .col(ColumnDef::new(Evaluations::ClearlyExplainRequirements).decimal())
+                    .col(ColumnDef::new(Evaluations::ClearLearningObjectives).decimal())
+                    .col(ColumnDef::new(Evaluations::InstructorProvidesFeedback).decimal())
+                    .col(ColumnDef::new(Evaluations::DemonstrateImportance).decimal())
+                    .col(ColumnDef::new(Evaluations::ExplainsSubjectMatter).decimal())
+                    .col(ColumnDef::new(Evaluations::ShowRespectForStudents).decimal())
+                    .col(ColumnDef::new(Evaluations::OverallTeachingRate).decimal())
+                    .col(ColumnDef::new(Evaluations::OverallCourseRate).decimal())
                     .foreign_key(
                         ForeignKey::create()
-                            .name("fk-fce_evaluations-component_id")
-                            .from(FceEvaluations::Table, FceEvaluations::ComponentId)
+                            .name("fk-evaluations-component_id")
+                            .from(Evaluations::Table, Evaluations::ComponentId)
                             .to(Components::Table, Components::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .name("fk-fce_evaluations-instructor_id")
-                            .from(FceEvaluations::Table, FceEvaluations::InstructorId)
+                            .name("fk-evaluations-instructor_id")
+                            .from(Evaluations::Table, Evaluations::InstructorId)
                             .to(Instructors::Table, Instructors::Id)
                             .on_delete(ForeignKeyAction::SetNull),
                     )
@@ -270,7 +266,7 @@ impl MigrationTrait for Migration {
             .await?;
 
         manager
-            .drop_table(Table::drop().table(FceEvaluations::Table).to_owned())
+            .drop_table(Table::drop().table(Evaluations::Table).to_owned())
             .await?;
 
         manager
@@ -369,7 +365,7 @@ enum ComponentReservations {
 }
 
 #[derive(Iden)]
-enum FceEvaluations {
+enum Evaluations {
     Table,
     Id,
     ComponentId,
