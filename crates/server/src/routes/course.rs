@@ -12,7 +12,7 @@ use axum::{
 use database::{
     db::create_connection,
     entities::{components, courses, instructors, meetings},
-    services::course::CourseService,
+    services::query_course::QueryCourseService,
 };
 use sea_orm::{EntityTrait, QuerySelect, prelude::Uuid};
 use serde_json::json;
@@ -37,7 +37,7 @@ pub async fn get_courses(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Query courses
-    let (courses, total_items) = CourseService::get_courses_paginated(
+    let (courses, total_items) = QueryCourseService::get_courses_paginated(
         &db,
         params.page,
         params.per_page,
@@ -51,7 +51,7 @@ pub async fn get_courses(
 
     // Get detailed course data with components
     let course_ids = courses.iter().map(|c| c.id).collect();
-    let detailed_courses = CourseService::get_courses_with_components(&db, course_ids)
+    let detailed_courses = QueryCourseService::get_courses_with_components(&db, course_ids)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -99,7 +99,7 @@ pub async fn get_course_by_id(Path(id): Path<Uuid>) -> Result<Json<CourseRespons
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Get course by ID
-    let course_data = CourseService::get_course_by_id(&db, id)
+    let course_data = QueryCourseService::get_course_by_id(&db, id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 

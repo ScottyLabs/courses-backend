@@ -1,4 +1,4 @@
-use database::{db::create_connection, services::course::CourseService};
+use database::{db::create_connection, services::save_course::SaveCourseService};
 use datafetcher::{
     courses::{first_pass::first_pass, second_pass::second_pass},
     syllabi::create_syllabus_map,
@@ -294,7 +294,7 @@ async fn main() {
     let save_start = Instant::now();
 
     // Save courses to the database
-    match CourseService::save_courses(&db, course_objs, syllabus_map).await {
+    match SaveCourseService::save_courses(&db, course_objs, syllabus_map).await {
         Ok(course_ids) => {
             println!(
                 "Successfully saved {} courses to database in {:?}",
