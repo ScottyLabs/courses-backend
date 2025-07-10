@@ -9,7 +9,7 @@ path = "src/lib.rs"
 [dependencies]
 database = { path = "../database" }
 dotenvy = { workspace = true }
-futures = "0.3.31"
+futures = { workspace = true }
 hurl = "6.1.1"
 lazy_static = "1.5.0"
 models = { path = "../models" }

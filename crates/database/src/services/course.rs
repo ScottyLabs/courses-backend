@@ -1,4 +1,5 @@
 use crate::entities::{components, courses, instructor_meetings, instructors, meetings};
+use futures::future::try_join_all;
 use models::{
     course_data::{ComponentType, CourseObject},
     syllabus_data::SyllabusMap,
@@ -7,14 +8,14 @@ use sea_orm::{
     ActiveValue::Set, ColumnTrait, Condition, DatabaseConnection, DatabaseTransaction, DbErr,
     EntityTrait, PaginatorTrait, QueryFilter, TransactionTrait,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
 
 pub struct CourseService;
 
 impl CourseService {
     /// The number of courses to save in a single batch
-    const BATCH_SIZE: usize = 50;
+    const BATCH_SIZE: usize = 200;
 
     pub async fn save_courses(
         db: &DatabaseConnection,
@@ -28,30 +29,47 @@ impl CourseService {
             Self::BATCH_SIZE
         );
 
-        let mut all_course_ids = Vec::with_capacity(total_courses);
+        let syllabus_map = Arc::new(syllabus_map);
 
-        // Process courses in batches
-        for (batch_idx, batch) in course_objs.chunks(Self::BATCH_SIZE).enumerate() {
-            let batch_start = batch_idx * Self::BATCH_SIZE;
-            let batch_end = std::cmp::min(batch_start + Self::BATCH_SIZE, total_courses);
+        let batch_futures =
+            course_objs
+                .chunks(Self::BATCH_SIZE)
+                .enumerate()
+                .map(|(batch_idx, batch)| {
+                    let db = db.clone();
+                    let syllabus_map = Arc::clone(&syllabus_map);
+                    let batch_vec = batch.to_vec();
 
-            println!(
-                "Processing batch {}/{}: courses {}-{}",
-                batch_idx + 1,
-                total_courses.div_ceil(Self::BATCH_SIZE),
-                batch_start + 1,
-                batch_end
-            );
+                    async move {
+                        let batch_start = batch_idx * Self::BATCH_SIZE;
+                        let batch_end =
+                            std::cmp::min(batch_start + Self::BATCH_SIZE, total_courses);
 
-            let batch_ids = Self::save_course_batch(db, batch.to_vec(), &syllabus_map).await?;
-            all_course_ids.extend(batch_ids);
+                        println!(
+                            "Processing batch {}/{}: courses {}-{}",
+                            batch_idx + 1,
+                            total_courses.div_ceil(Self::BATCH_SIZE),
+                            batch_start + 1,
+                            batch_end
+                        );
 
-            println!(
-                "Completed batch {}, {} courses processed so far",
-                batch_idx + 1,
-                all_course_ids.len()
-            );
-        }
+                        let result = Self::save_course_batch(&db, batch_vec, &syllabus_map).await;
+
+                        match &result {
+                            Ok(ids) => println!(
+                                "Completed batch {}, {} courses processed",
+                                batch_idx + 1,
+                                ids.len()
+                            ),
+                            Err(e) => eprintln!("Error in batch {}: {}", batch_idx + 1, e),
+                        }
+
+                        result
+                    }
+                });
+
+        let all_batch_results: Vec<Vec<Uuid>> = try_join_all(batch_futures).await?;
+        let all_course_ids = all_batch_results.into_iter().flatten().collect();
 
         println!("Successfully saved all {total_courses} courses");
         Ok(all_course_ids)
@@ -63,24 +81,100 @@ impl CourseService {
         syllabus_map: &SyllabusMap,
     ) -> Result<Vec<Uuid>, DbErr> {
         let txn = db.begin().await?;
-        let mut course_ids = Vec::with_capacity(course_objs.len());
-
-        // Batch fetch all instructors
         let instructor_cache = Self::build_instructor_cache(&txn, &course_objs).await?;
 
+        // Collect all data for bulk insertion
+        let mut all_courses = Vec::new();
+        let mut all_components = Vec::new();
+        let mut all_meetings = Vec::new();
+        let mut all_instructor_meetings = Vec::new();
+        let mut course_ids = Vec::new();
+
+        // Prepare all data first
         for (idx, course_obj) in course_objs.into_iter().enumerate() {
             if idx.is_multiple_of(10) {
-                println!("  Saving course {} in current batch", idx + 1);
+                println!("  Saving course {idx} in current batch");
             }
 
-            match Self::save_course(course_obj, syllabus_map, &txn, &instructor_cache).await {
-                Ok(id) => course_ids.push(id),
-                Err(e) => {
-                    eprintln!("Error saving course: {e}");
-                    txn.rollback().await.ok();
-                    return Err(e);
+            let course_id = Uuid::new_v4();
+            course_ids.push(course_id);
+
+            // Prepare course
+            all_courses.push(Self::course_to_active_model(&course_obj));
+
+            // Prepare components for this course
+            for component in course_obj.course.components {
+                let component_id = Uuid::new_v4();
+
+                let key = (
+                    course_obj.course.year,
+                    course_obj.course.season,
+                    course_obj.course.number.to_string(),
+                    component.code.clone(),
+                );
+                let syllabus_url = syllabus_map.get(&key).cloned();
+
+                all_components.push(components::ActiveModel {
+                    id: Set(component_id),
+                    course_id: Set(course_id),
+                    title: Set(component.title),
+                    component_type: Set(match component.component_type {
+                        ComponentType::Lecture => "Lecture".to_string(),
+                        ComponentType::Section => "Section".to_string(),
+                    }),
+                    code: Set(component.code),
+                    syllabus_url: Set(syllabus_url),
+                });
+
+                // Prepare meetings for this component
+                for meeting in component.meetings {
+                    let meeting_id = Uuid::new_v4();
+
+                    all_meetings.push(meetings::ActiveModel {
+                        id: Set(meeting_id),
+                        component_id: Set(component_id),
+                        days_pattern: Set(meeting.days.to_string()),
+                        time_begin: Set(meeting.time.as_ref().map(|t| t.begin)),
+                        time_end: Set(meeting.time.as_ref().map(|t| t.end)),
+                        bldg_room: Set(meeting.bldg_room.to_string()),
+                        campus: Set(meeting.campus),
+                    });
+
+                    // Save instructors for this meeting using the cache
+                    if let Some(instructors) = meeting.instructors.as_ref() {
+                        for instructor_name in instructors {
+                            if let Some(&instructor_id) = instructor_cache.get(instructor_name) {
+                                // Create a many-to-many link between instructor and meeting
+                                all_instructor_meetings.push(instructor_meetings::ActiveModel {
+                                    id: Set(Uuid::new_v4()),
+                                    instructor_id: Set(instructor_id),
+                                    meeting_id: Set(meeting_id),
+                                });
+                            }
+                        }
+                    }
                 }
             }
+        }
+
+        // Bulk insert everything at once
+        if !all_courses.is_empty() {
+            courses::Entity::insert_many(all_courses).exec(&txn).await?;
+        }
+        if !all_components.is_empty() {
+            components::Entity::insert_many(all_components)
+                .exec(&txn)
+                .await?;
+        }
+        if !all_meetings.is_empty() {
+            meetings::Entity::insert_many(all_meetings)
+                .exec(&txn)
+                .await?;
+        }
+        if !all_instructor_meetings.is_empty() {
+            instructor_meetings::Entity::insert_many(all_instructor_meetings)
+                .exec(&txn)
+                .await?;
         }
 
         txn.commit().await?;
@@ -140,77 +234,6 @@ impl CourseService {
         }
 
         Ok(cache)
-    }
-
-    async fn save_course(
-        course_obj: CourseObject,
-        syllabus_map: &SyllabusMap,
-        txn: &DatabaseTransaction,
-        instructor_cache: &HashMap<String, Uuid>,
-    ) -> Result<Uuid, DbErr> {
-        let course_model = Self::course_to_active_model(&course_obj);
-        let course_result = courses::Entity::insert(course_model).exec(txn).await?;
-        let course_id = course_result.last_insert_id;
-
-        // Save components for this course
-        for component in course_obj.course.components {
-            let key = (
-                course_obj.course.year,
-                course_obj.course.season,
-                course_obj.course.number.to_string(),
-                component.code.to_owned(),
-            );
-            let syllabus_url = syllabus_map.get(&key).cloned();
-
-            let component_model = components::ActiveModel {
-                id: Set(Uuid::new_v4()),
-                course_id: Set(course_id),
-                title: Set(component.title),
-                component_type: Set(match component.component_type {
-                    ComponentType::Lecture => "Lecture".to_string(),
-                    ComponentType::Section => "Section".to_string(),
-                }),
-                code: Set(component.code),
-                syllabus_url: Set(syllabus_url),
-            };
-            let component_result = components::Entity::insert(component_model)
-                .exec(txn)
-                .await?;
-            let component_id = component_result.last_insert_id;
-
-            // Save meetings for this component
-            for meeting in component.meetings {
-                let meeting_model = meetings::ActiveModel {
-                    id: Set(Uuid::new_v4()),
-                    component_id: Set(component_id),
-                    days_pattern: Set(meeting.days.to_string()),
-                    time_begin: Set(meeting.time.as_ref().map(|t| t.begin)),
-                    time_end: Set(meeting.time.as_ref().map(|t| t.end)),
-                    bldg_room: Set(meeting.bldg_room.to_string()),
-                    campus: Set(meeting.campus),
-                };
-                let meeting_result = meetings::Entity::insert(meeting_model).exec(txn).await?;
-                let meeting_id = meeting_result.last_insert_id;
-
-                // Save instructors for this meeting using the cache
-                for instructor in meeting.instructors.as_ref().unwrap_or(&vec![]) {
-                    let instructor_id = instructor_cache.get(instructor).ok_or_else(|| {
-                        DbErr::Custom(format!("Instructor {instructor} not found in cache"))
-                    })?;
-
-                    // Create a many-to-many link between instructor and meeting
-                    let link = instructor_meetings::ActiveModel {
-                        id: Set(Uuid::new_v4()),
-                        instructor_id: Set(*instructor_id),
-                        meeting_id: Set(meeting_id),
-                    };
-
-                    instructor_meetings::Entity::insert(link).exec(txn).await?;
-                }
-            }
-        }
-
-        Ok(course_id)
     }
 
     fn course_to_active_model(course_obj: &CourseObject) -> courses::ActiveModel {

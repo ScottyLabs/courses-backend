@@ -9,6 +9,7 @@ authors = ["Anish Pallati <apallati@anish.land>"]
 [workspace.dependencies]
 chrono = { version = "0.4.40", features = ["serde"] }
 dotenvy = "0.15.7"
+futures = "0.3.31"
 sea-orm = { version = "1.1.13", features = [
     "sqlx-postgres",
     "runtime-tokio-rustls",
