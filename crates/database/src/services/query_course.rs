@@ -1,6 +1,7 @@
 use crate::entities::{components, courses, instructor_meetings, instructors, meetings};
 use sea_orm::{
-    ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
+    ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, JoinType, PaginatorTrait,
+    QueryFilter, QuerySelect, RelationTrait,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -34,10 +35,17 @@ impl QueryCourseService {
         }
 
         if let Some(search) = search {
+            // Join with components table to search component titles as well
+            query = query.join(JoinType::LeftJoin, courses::Relation::Components.def());
+
             let search_condition = Condition::any()
                 .add(courses::Column::Number.like(format!("%{search}%")))
-                .add(courses::Column::Description.like(format!("%{search}%")));
+                .add(courses::Column::Description.like(format!("%{search}%")))
+                .add(components::Column::Title.like(format!("%{search}%")));
             condition = condition.add(search_condition);
+
+            // Use distinct to avoid duplicate courses when multiple components match
+            query = query.distinct();
         }
 
         // The first two digits of the course number are the department prefix
