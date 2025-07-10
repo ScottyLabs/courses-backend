@@ -44,7 +44,7 @@ impl QueryCourseService {
                 .add(components::Column::Title.like(format!("%{search}%")))
                 // Trigram similarity (fuzzy search)
                 .add(Expr::cust_with_expr(
-                    "COALESCE(description, '') % $1",
+                    "COALESCE(courses.description, '') % $1",
                     search.clone(),
                 ))
                 .add(Expr::cust_with_expr(
