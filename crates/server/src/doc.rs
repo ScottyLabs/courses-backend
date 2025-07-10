@@ -1,4 +1,4 @@
-use crate::routes::{auth, root};
+use crate::routes::{auth, course, root};
 use utoipa::{
     Modify, OpenApi,
     openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
@@ -24,10 +24,17 @@ impl Modify for SecurityAddon {
 /// API Documentation
 #[derive(OpenApi)]
 #[openapi(
-    paths(root::root, auth::auth),
+    paths(
+        root::root,
+        auth::auth,
+        course::get_courses,
+        course::get_course_by_id,
+        course::get_course_filters
+    ),
     modifiers(&SecurityAddon),
     tags(
         (name = "Authentication", description = "Authentication related endpoints"),
+        (name = "Courses", description = "Course related endpoints"),
     ),
     info(
         title = "Course API",

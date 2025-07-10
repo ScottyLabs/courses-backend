@@ -1,10 +1,11 @@
 mod doc;
+mod dtos;
 mod routes;
 mod utils;
 
 use doc::ApiDoc;
 use log::info;
-use routes::{auth, root};
+use routes::{auth, course, root};
 use tower::ServiceBuilder;
 use tower_oauth2_resource_server::server::OAuth2ResourceServer;
 use utils::shutdown::shutdown_signal;
@@ -30,7 +31,11 @@ async fn main() {
         .routes(routes!(auth::auth))
         .layer(ServiceBuilder::new().layer(oauth2_resource_server.into_layer()));
 
-    let public_routes = OpenApiRouter::new().routes(routes!(root::root));
+    let public_routes = OpenApiRouter::new()
+        .routes(routes!(root::root))
+        .merge(OpenApiRouter::new().routes(routes!(course::get_courses)))
+        .merge(OpenApiRouter::new().routes(routes!(course::get_course_filters)))
+        .merge(OpenApiRouter::new().routes(routes!(course::get_course_by_id)));
 
     let (router, _api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .merge(protected_routes)

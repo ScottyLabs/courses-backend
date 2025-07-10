@@ -3710,9 +3710,14 @@ name = "server"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "chrono",
+ "database",
  "dotenvy",
  "env_logger",
  "log",
+ "sea-orm",
+ "serde",
+ "serde_json",
  "tokio",
  "tower",
  "tower-oauth2-resource-server",
@@ -4694,6 +4699,7 @@ dependencies = [
  "quote",
  "regex",
  "syn 2.0.104",
+ "uuid",
 ]
 
 [[package]]

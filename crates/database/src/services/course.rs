@@ -3,7 +3,10 @@ use models::{
     course_data::{ComponentType, CourseObject},
     syllabus_data::SyllabusMap,
 };
-use sea_orm::{ActiveValue::Set, DatabaseTransaction, TransactionTrait, prelude::*};
+use sea_orm::{
+    ActiveValue::Set, Condition, DatabaseTransaction, JoinType, QuerySelect, TransactionTrait,
+    prelude::*,
+};
 use std::collections::HashMap;
 
 pub struct CourseService;
@@ -260,5 +263,144 @@ impl CourseService {
                 .as_ref()
                 .and_then(|m| m.notes.to_owned())),
         }
+    }
+
+    /// Query courses with pagination and filtering
+    pub async fn get_courses_paginated(
+        db: &DatabaseConnection,
+        page: u64,
+        per_page: u64,
+        seasons: Option<Vec<String>>,
+        years: Option<Vec<i16>>,
+        search: Option<String>,
+        departments: Option<Vec<String>>,
+    ) -> Result<(Vec<courses::Model>, u64), DbErr> {
+        let mut query = courses::Entity::find();
+        let mut condition = Condition::all();
+
+        if let Some(seasons) = seasons
+            && !seasons.is_empty()
+        {
+            condition = condition.add(courses::Column::Season.is_in(seasons));
+        }
+
+        if let Some(years) = years
+            && !years.is_empty()
+        {
+            condition = condition.add(courses::Column::Year.is_in(years));
+        }
+
+        if let Some(search) = search {
+            let search_condition = Condition::any()
+                .add(courses::Column::Number.like(format!("%{search}%")))
+                .add(courses::Column::Description.like(format!("%{search}%")));
+            condition = condition.add(search_condition);
+        }
+
+        // The first two digits of the course number are the department prefix
+        if let Some(departments) = departments
+            && !departments.is_empty()
+        {
+            let mut dept_condition = Condition::any(); // Use OR
+            for dept in &departments {
+                let pattern = format!("{dept}%");
+                dept_condition = dept_condition.add(courses::Column::Number.like(pattern));
+            }
+            condition = condition.add(dept_condition);
+        }
+
+        query = query.filter(condition);
+
+        // Apply pagination
+        let total_items = query.clone().count(db).await?;
+        let paginator = query.paginate(db, per_page);
+        let courses = paginator.fetch_page(page - 1).await?; // SeaORM uses 0-based pages
+
+        Ok((courses, total_items))
+    }
+
+    /// Get a single course with all its components, meetings, and instructors
+    pub async fn get_course_by_id(
+        db: &DatabaseConnection,
+        course_id: Uuid,
+    ) -> Result<
+        Option<(
+            courses::Model,
+            Vec<(
+                components::Model,
+                Vec<(meetings::Model, Vec<instructors::Model>)>,
+            )>,
+        )>,
+        DbErr,
+    > {
+        let course = match courses::Entity::find_by_id(course_id).one(db).await? {
+            Some(course) => course,
+            None => return Ok(None),
+        };
+
+        // Get all components for this course
+        let components = components::Entity::find()
+            .filter(components::Column::CourseId.eq(course_id))
+            .all(db)
+            .await?;
+
+        let mut result_components = Vec::new();
+
+        for component in components {
+            // Get all meetings for this component
+            let meetings = meetings::Entity::find()
+                .filter(meetings::Column::ComponentId.eq(component.id))
+                .all(db)
+                .await?;
+
+            let mut result_meetings = Vec::new();
+
+            for meeting in meetings {
+                // Get all instructors for this meeting
+                let instructors = instructors::Entity::find()
+                    .join(
+                        JoinType::InnerJoin,
+                        instructors::Relation::InstructorMeetings.def(),
+                    )
+                    .join(
+                        JoinType::InnerJoin,
+                        instructor_meetings::Relation::Meetings.def(),
+                    )
+                    .filter(meetings::Column::Id.eq(meeting.id))
+                    .all(db)
+                    .await?;
+
+                result_meetings.push((meeting, instructors));
+            }
+
+            result_components.push((component, result_meetings));
+        }
+
+        Ok(Some((course, result_components)))
+    }
+
+    /// Get multiple courses with their components (for list view)
+    pub async fn get_courses_with_components(
+        db: &DatabaseConnection,
+        course_ids: Vec<Uuid>,
+    ) -> Result<
+        Vec<(
+            courses::Model,
+            Vec<(
+                components::Model,
+                Vec<(meetings::Model, Vec<instructors::Model>)>,
+            )>,
+        )>,
+        DbErr,
+    > {
+        let mut results = Vec::new();
+
+        for course_id in course_ids {
+            if let Some(course_data) = Self::get_course_by_id(db, course_id).await? {
+                results.push(course_data);
+            }
+        }
+
+        Ok(results)
     }
 }
