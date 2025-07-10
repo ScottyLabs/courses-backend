@@ -3,6 +3,7 @@
 pub use super::component_reservations::Entity as ComponentReservations;
 pub use super::components::Entity as Components;
 pub use super::courses::Entity as Courses;
+pub use super::evaluations::Entity as Evaluations;
 pub use super::instructor_meetings::Entity as InstructorMeetings;
 pub use super::instructors::Entity as Instructors;
 pub use super::meetings::Entity as Meetings;

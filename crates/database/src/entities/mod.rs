@@ -5,6 +5,7 @@ pub mod prelude;
 pub mod component_reservations;
 pub mod components;
 pub mod courses;
+pub mod evaluations;
 pub mod instructor_meetings;
 pub mod instructors;
 pub mod meetings;

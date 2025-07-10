@@ -219,10 +219,23 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Evaluations::ComponentId).uuid().not_null())
-                    .col(ColumnDef::new(Evaluations::InstructorId).uuid())
-                    .col(ColumnDef::new(Evaluations::CourseLevel).string())
-                    .col(ColumnDef::new(Evaluations::TotalStudents).small_unsigned())
-                    .col(ColumnDef::new(Evaluations::NumResponses).small_unsigned())
+                    .col(ColumnDef::new(Evaluations::InstructorId).uuid().not_null())
+                    .col(
+                        ColumnDef::new(Evaluations::CourseShortName)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(Evaluations::CourseLevel).string().not_null())
+                    .col(
+                        ColumnDef::new(Evaluations::TotalStudents)
+                            .small_unsigned()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(Evaluations::NumResponses)
+                            .small_unsigned()
+                            .not_null(),
+                    )
                     // Evaluation ratings (stored as decimals)
                     .col(ColumnDef::new(Evaluations::HoursPerWeek).decimal())
                     .col(ColumnDef::new(Evaluations::InterestInStudentLearning).decimal())
@@ -370,6 +383,7 @@ enum Evaluations {
     Id,
     ComponentId,
     InstructorId,
+    CourseShortName,
     CourseLevel,
     TotalStudents,
     NumResponses,

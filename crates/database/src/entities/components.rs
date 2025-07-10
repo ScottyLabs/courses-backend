@@ -27,6 +27,8 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     Courses,
+    #[sea_orm(has_many = "super::evaluations::Entity")]
+    Evaluations,
     #[sea_orm(has_many = "super::meetings::Entity")]
     Meetings,
 }
@@ -40,6 +42,12 @@ impl Related<super::component_reservations::Entity> for Entity {
 impl Related<super::courses::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Courses.def()
+    }
+}
+
+impl Related<super::evaluations::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Evaluations.def()
     }
 }
 
