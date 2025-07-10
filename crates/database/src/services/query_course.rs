@@ -1,7 +1,7 @@
 use crate::entities::{components, courses, instructor_meetings, instructors, meetings};
 use sea_orm::{
     ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
-    QuerySelect, QueryTrait, prelude::Expr, sea_query::ExprTrait,
+    QueryOrder, QuerySelect, QueryTrait, prelude::Expr, sea_query::ExprTrait,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -53,7 +53,16 @@ impl QueryCourseService {
                     search_condition.add(courses::Column::Id.is_in(component_course_ids));
             }
 
-            query = query.filter(search_condition);
+            query = query
+                .filter(search_condition)
+                .order_by_desc(Expr::cust_with_expr(
+                    "similarity(courses.number, $1)",
+                    &search,
+                ))
+                .order_by_desc(Expr::cust_with_expr(
+                    "similarity(courses.description, $1)",
+                    &search,
+                ));
         }
 
         println!(
