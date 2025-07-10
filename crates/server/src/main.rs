@@ -7,6 +7,7 @@ use doc::ApiDoc;
 use log::info;
 use routes::{auth, course, root};
 use tower::ServiceBuilder;
+use tower_http::compression::CompressionLayer;
 use tower_oauth2_resource_server::server::OAuth2ResourceServer;
 use utils::shutdown::shutdown_signal;
 use utoipa::OpenApi;
@@ -42,7 +43,9 @@ async fn main() {
         .merge(public_routes)
         .split_for_parts();
 
-    let app = router.merge(SwaggerUi::new("/swagger").url("/openapi.json", ApiDoc::openapi()));
+    let app = router
+        .merge(SwaggerUi::new("/swagger").url("/openapi.json", ApiDoc::openapi()))
+        .layer(CompressionLayer::new());
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
     info!("Running axum on http://localhost:3000");
