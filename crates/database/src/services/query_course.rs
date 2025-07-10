@@ -44,18 +44,15 @@ impl QueryCourseService {
                 .add(components::Column::Title.like(format!("%{search}%")))
                 // Trigram similarity (fuzzy search)
                 .add(Expr::cust_with_expr(
-                    "COALESCE(courses.description, '') % $1",
+                    "courses.description % $1",
                     search.clone(),
                 ))
-                .add(Expr::cust_with_expr(
-                    "COALESCE(components.title, '') % $1",
-                    search,
-                ));
+                .add(Expr::cust_with_expr("components.title % $1", search));
 
             condition = condition.add(search_condition);
 
             // Use distinct to avoid duplicate courses when multiple components match
-            query = query.distinct();
+            query = query.distinct_on([courses::Column::Id]);
         }
 
         // The first two digits of the course number are the department prefix
