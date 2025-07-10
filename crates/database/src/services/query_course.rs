@@ -1,7 +1,7 @@
 use crate::entities::{components, courses, instructor_meetings, instructors, meetings};
 use sea_orm::{
     ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, JoinType, PaginatorTrait,
-    QueryFilter, QuerySelect, RelationTrait, prelude::Expr,
+    QueryFilter, QuerySelect, RelationTrait, prelude::Expr, sea_query::ExprTrait,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -43,7 +43,10 @@ impl QueryCourseService {
                 .add(courses::Column::Description.like(format!("%{search}%")))
                 .add(components::Column::Title.like(format!("%{search}%")))
                 // Trigram similarity (fuzzy search)
-                .add(Expr::cust_with_expr("description % $1", search.clone()))
+                .add(Expr::cust_with_expr(
+                    "courses.description % $1",
+                    search.clone(),
+                ))
                 .add(Expr::cust_with_expr("components.title % $1", search));
 
             condition = condition.add(search_condition);
@@ -56,12 +59,9 @@ impl QueryCourseService {
         if let Some(departments) = departments
             && !departments.is_empty()
         {
-            let mut dept_condition = Condition::any(); // Use OR
-            for dept in &departments {
-                let pattern = format!("{dept}%");
-                dept_condition = dept_condition.add(courses::Column::Number.like(pattern));
-            }
-            condition = condition.add(dept_condition);
+            let dept_codes: Vec<String> = departments.into_iter().collect();
+            condition = condition
+                .add(Expr::cust("substring(courses.number from 1 for 2)").is_in(dept_codes));
         }
 
         query = query.filter(condition);
