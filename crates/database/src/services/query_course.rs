@@ -1,7 +1,7 @@
 use crate::entities::{components, courses, instructor_meetings, instructors, meetings};
 use sea_orm::{
     ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, JoinType, PaginatorTrait,
-    QueryFilter, QuerySelect, RelationTrait,
+    QueryFilter, QuerySelect, RelationTrait, prelude::Expr,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -41,7 +41,11 @@ impl QueryCourseService {
             let search_condition = Condition::any()
                 .add(courses::Column::Number.like(format!("%{search}%")))
                 .add(courses::Column::Description.like(format!("%{search}%")))
-                .add(components::Column::Title.like(format!("%{search}%")));
+                .add(components::Column::Title.like(format!("%{search}%")))
+                // Trigram similarity (fuzzy search)
+                .add(Expr::cust_with_expr("description % $1", search.clone()))
+                .add(Expr::cust_with_expr("components.title % $1", search));
+
             condition = condition.add(search_condition);
 
             // Use distinct to avoid duplicate courses when multiple components match

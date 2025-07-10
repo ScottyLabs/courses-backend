@@ -3,6 +3,7 @@ pub use sea_orm_migration::prelude::*;
 mod m20250709_add_indexes;
 mod m20250709_create_all_tables;
 mod m20250710_add_component_title_index;
+mod m20250710_add_search_indexes;
 
 pub struct Migrator;
 
@@ -13,6 +14,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20250709_create_all_tables::Migration),
             Box::new(m20250709_add_indexes::Migration),
             Box::new(m20250710_add_component_title_index::Migration),
+            Box::new(m20250710_add_search_indexes::Migration),
         ]
     }
 }
