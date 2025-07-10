@@ -36,14 +36,13 @@ pub async fn get_courses(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // Query courses
     let (courses, total_items) = QueryCourseService::get_courses_paginated(
         &db,
         params.page,
         params.per_page,
         params.season,
         params.year,
-        params.search,
+        // params.search,
         params.department,
     )
     .await

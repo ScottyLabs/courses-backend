@@ -64,7 +64,7 @@ pub struct CourseQueryParams {
 
     pub season: Option<Vec<String>>,
     pub year: Option<Vec<i16>>,
-    pub search: Option<String>,
+    // pub search: Option<String>,
     pub department: Option<Vec<String>>,
 }
 
