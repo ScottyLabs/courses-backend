@@ -1,7 +1,7 @@
 use crate::entities::{components, courses, instructor_meetings, instructors, meetings};
 use sea_orm::{
     ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, JoinType, PaginatorTrait,
-    QueryFilter, QuerySelect, RelationTrait, prelude::Expr, sea_query::ExprTrait,
+    QueryFilter, QuerySelect, QueryTrait, RelationTrait, prelude::Expr, sea_query::ExprTrait,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -68,6 +68,11 @@ impl QueryCourseService {
         }
 
         query = query.filter(condition);
+
+        println!(
+            "Generated SQL: {}",
+            query.build(sea_orm::DatabaseBackend::Postgres)
+        );
 
         // Apply pagination
         let total_items = query.clone().count(db).await?;
