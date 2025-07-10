@@ -3,10 +3,7 @@ use models::{
     course_data::{ComponentType, CourseObject},
     syllabus_data::SyllabusMap,
 };
-use sea_orm::{
-    ActiveValue::Set, Condition, DatabaseTransaction, JoinType, QuerySelect, TransactionTrait,
-    prelude::*,
-};
+use sea_orm::{ActiveValue::Set, Condition, DatabaseTransaction, TransactionTrait, prelude::*};
 use std::collections::HashMap;
 
 pub struct CourseService;
@@ -64,7 +61,7 @@ impl CourseService {
         let txn = db.begin().await?;
         let mut course_ids = Vec::with_capacity(course_objs.len());
 
-        // Pre-load all instructors to avoid N+1 queries
+        // Batch fetch all instructors
         let instructor_cache = Self::build_instructor_cache(&txn, &course_objs).await?;
 
         for (idx, course_obj) in course_objs.into_iter().enumerate() {
@@ -86,7 +83,7 @@ impl CourseService {
         Ok(course_ids)
     }
 
-    /// Build a cache of all instructors to avoid N+1 queries
+    /// Build a cache of all instructors
     async fn build_instructor_cache(
         txn: &DatabaseTransaction,
         course_objs: &[CourseObject],
@@ -344,33 +341,69 @@ impl CourseService {
             .all(db)
             .await?;
 
-        let mut result_components = Vec::new();
+        if components.is_empty() {
+            return Ok(Some((course, vec![])));
+        }
 
-        for component in components {
-            // Get all meetings for this component
-            let meetings = meetings::Entity::find()
-                .filter(meetings::Column::ComponentId.eq(component.id))
+        let component_ids: Vec<Uuid> = components.iter().map(|c| c.id).collect();
+
+        // Batch fetch all meetings for all components
+        let meetings = meetings::Entity::find()
+            .filter(meetings::Column::ComponentId.is_in(component_ids))
+            .all(db)
+            .await?;
+
+        if meetings.is_empty() {
+            let result_components = components
+                .into_iter()
+                .map(|component| (component, vec![]))
+                .collect();
+            return Ok(Some((course, result_components)));
+        }
+
+        let meeting_ids: Vec<Uuid> = meetings.iter().map(|m| m.id).collect();
+
+        // Batch fetch all instructor-meeting relationships
+        let instructor_meetings: Vec<(instructor_meetings::Model, instructors::Model)> =
+            instructor_meetings::Entity::find()
+                .filter(instructor_meetings::Column::MeetingId.is_in(meeting_ids))
+                .find_also_related(instructors::Entity)
                 .all(db)
-                .await?;
+                .await?
+                .into_iter()
+                .filter_map(|(im, instructor)| instructor.map(|i| (im, i)))
+                .collect();
+
+        // Build lookup maps
+        let mut meetings_by_component: HashMap<Uuid, Vec<meetings::Model>> = HashMap::new();
+        for meeting in meetings {
+            meetings_by_component
+                .entry(meeting.component_id)
+                .or_default()
+                .push(meeting);
+        }
+
+        let mut instructors_by_meeting: HashMap<Uuid, Vec<instructors::Model>> = HashMap::new();
+        for (im, instructor) in instructor_meetings {
+            instructors_by_meeting
+                .entry(im.meeting_id)
+                .or_default()
+                .push(instructor);
+        }
+
+        // Build the final result structure
+        let mut result_components = Vec::new();
+        for component in components {
+            let component_meetings = meetings_by_component
+                .remove(&component.id)
+                .unwrap_or_default();
 
             let mut result_meetings = Vec::new();
-
-            for meeting in meetings {
-                // Get all instructors for this meeting
-                let instructors = instructors::Entity::find()
-                    .join(
-                        JoinType::InnerJoin,
-                        instructors::Relation::InstructorMeetings.def(),
-                    )
-                    .join(
-                        JoinType::InnerJoin,
-                        instructor_meetings::Relation::Meetings.def(),
-                    )
-                    .filter(meetings::Column::Id.eq(meeting.id))
-                    .all(db)
-                    .await?;
-
-                result_meetings.push((meeting, instructors));
+            for meeting in component_meetings {
+                let meeting_instructors = instructors_by_meeting
+                    .remove(&meeting.id)
+                    .unwrap_or_default();
+                result_meetings.push((meeting, meeting_instructors));
             }
 
             result_components.push((component, result_meetings));
@@ -393,12 +426,120 @@ impl CourseService {
         )>,
         DbErr,
     > {
-        let mut results = Vec::new();
+        if course_ids.is_empty() {
+            return Ok(vec![]);
+        }
 
-        for course_id in course_ids {
-            if let Some(course_data) = Self::get_course_by_id(db, course_id).await? {
-                results.push(course_data);
+        // Batch fetch all courses
+        let courses = courses::Entity::find()
+            .filter(courses::Column::Id.is_in(course_ids.clone()))
+            .all(db)
+            .await?;
+
+        // Batch fetch all components for all courses
+        let components = components::Entity::find()
+            .filter(components::Column::CourseId.is_in(course_ids))
+            .all(db)
+            .await?;
+
+        if components.is_empty() {
+            let results = courses.into_iter().map(|course| (course, vec![])).collect();
+            return Ok(results);
+        }
+
+        let component_ids: Vec<Uuid> = components.iter().map(|c| c.id).collect();
+
+        // Batch fetch all meetings for all components
+        let meetings = meetings::Entity::find()
+            .filter(meetings::Column::ComponentId.is_in(component_ids))
+            .all(db)
+            .await?;
+
+        if meetings.is_empty() {
+            let mut components_by_course: HashMap<Uuid, Vec<components::Model>> = HashMap::new();
+            for component in components {
+                components_by_course
+                    .entry(component.course_id)
+                    .or_default()
+                    .push(component);
             }
+
+            let results = courses
+                .into_iter()
+                .map(|course| {
+                    let course_components = components_by_course
+                        .remove(&course.id)
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|component| (component, vec![]))
+                        .collect();
+                    (course, course_components)
+                })
+                .collect();
+            return Ok(results);
+        }
+
+        let meeting_ids: Vec<Uuid> = meetings.iter().map(|m| m.id).collect();
+
+        // Batch fetch all instructor-meeting relationships
+        let instructor_meetings: Vec<(instructor_meetings::Model, instructors::Model)> =
+            instructor_meetings::Entity::find()
+                .filter(instructor_meetings::Column::MeetingId.is_in(meeting_ids))
+                .find_also_related(instructors::Entity)
+                .all(db)
+                .await?
+                .into_iter()
+                .filter_map(|(im, instructor)| instructor.map(|i| (im, i)))
+                .collect();
+
+        // Build lookup maps
+        let mut components_by_course: HashMap<Uuid, Vec<components::Model>> = HashMap::new();
+        for component in components {
+            components_by_course
+                .entry(component.course_id)
+                .or_default()
+                .push(component);
+        }
+
+        let mut meetings_by_component: HashMap<Uuid, Vec<meetings::Model>> = HashMap::new();
+        for meeting in meetings {
+            meetings_by_component
+                .entry(meeting.component_id)
+                .or_default()
+                .push(meeting);
+        }
+
+        let mut instructors_by_meeting: HashMap<Uuid, Vec<instructors::Model>> = HashMap::new();
+        for (im, instructor) in instructor_meetings {
+            instructors_by_meeting
+                .entry(im.meeting_id)
+                .or_default()
+                .push(instructor);
+        }
+
+        // Build the final result structure
+        let mut results = Vec::new();
+        for course in courses {
+            let course_components = components_by_course.remove(&course.id).unwrap_or_default();
+
+            let mut result_components = Vec::new();
+            for component in course_components {
+                let component_meetings = meetings_by_component
+                    .remove(&component.id)
+                    .unwrap_or_default();
+
+                let mut result_meetings = Vec::new();
+                for meeting in component_meetings {
+                    let meeting_instructors = instructors_by_meeting
+                        .remove(&meeting.id)
+                        .unwrap_or_default();
+                    result_meetings.push((meeting, meeting_instructors));
+                }
+
+                result_components.push((component, result_meetings));
+            }
+
+            results.push((course, result_components));
         }
 
         Ok(results)
