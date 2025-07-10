@@ -44,43 +44,16 @@ impl QueryCourseService {
 
         let mut query = courses::Entity::find().filter(base_condition);
 
-        // Search courses directly using full-text search
         if let Some(search) = search {
-            let course_search_condition = Condition::any()
-                // Use the composite GIN index on the tsvector column
-                .add(Expr::cust_with_expr(
-                    "(courses.number || ' ' || COALESCE(courses.description, '')) @@ plainto_tsquery($1)",
-                    search.clone()
-                ))
-                // Fallback to trigram for partial matches
-                .add(Expr::cust_with_expr(
-                    "courses.number % $1 OR COALESCE(courses.description, '') % $1",
-                    search.clone()
-                ));
+            let mut search_condition = Self::build_search_condition(&search);
+            let component_course_ids = Self::search_components(db, &search).await?;
 
-            query = query.filter(course_search_condition);
-
-            // Search components separately and get their course IDs
-            let component_course_ids = components::Entity::find()
-                .select_only()
-                .column(components::Column::CourseId)
-                .filter(
-                    Expr::cust_with_expr("components.title % $1", search.clone()).or(
-                        Expr::cust_with_expr(
-                            "to_tsvector('english', components.title) @@ plainto_tsquery($1)",
-                            search,
-                        ),
-                    ),
-                )
-                .into_tuple::<Uuid>()
-                .all(db)
-                .await?;
-
-            // Combine results (courses matching directly OR courses with matching titles)
             if !component_course_ids.is_empty() {
-                query = query
-                    .filter(Condition::any().add(courses::Column::Id.is_in(component_course_ids)));
+                search_condition =
+                    search_condition.add(courses::Column::Id.is_in(component_course_ids));
             }
+
+            query = query.filter(search_condition);
         }
 
         println!(
@@ -94,6 +67,62 @@ impl QueryCourseService {
         let courses = paginator.fetch_page(page - 1).await?; // SeaORM uses 0-based pages
 
         Ok((courses, total_items))
+    }
+
+    /// Build course search condition using trigrams + tsvector
+    fn build_search_condition(search_term: &str) -> Condition {
+        let is_likely_course_number = search_term.chars().all(|c| c.is_numeric());
+        let is_short = search_term.len() <= 5;
+
+        if is_likely_course_number && is_short {
+            // For course numbers, prioritize exact and trigram matches
+            Condition::any()
+                // First prioritize exact match
+                .add(courses::Column::Number.eq(search_term))
+                // Then prioritize "starts with"
+                .add(courses::Column::Number.like(format!("{search_term}%")))
+                // Then prioritize trigram similarity (fuzzy matching)
+                .add(Expr::cust_with_expr("courses.number % $1", search_term))
+                // Finally prioritize description contains
+                .add(Expr::cust_with_expr(
+                    "COALESCE(courses.description, '') % $1",
+                    search_term,
+                ))
+        } else {
+            // For natural language, use tsvector
+            Condition::any()
+                // Full-text search on description
+                .add(Expr::cust_with_expr(
+                    "to_tsvector('english', COALESCE(courses.description, '')) @@ plainto_tsquery('english', $1)",
+                    search_term
+                ))
+                // Trigram similarity on description
+                .add(Expr::cust_with_expr("COALESCE(courses.description, '') % $1", search_term))
+        }
+    }
+
+    /// Search component titles (course name) using trigrams
+    async fn search_components(
+        db: &DatabaseConnection,
+        search_term: &str,
+    ) -> Result<Vec<Uuid>, DbErr> {
+        components::Entity::find()
+            .select_only()
+            .column(components::Column::CourseId)
+            .filter(
+                Condition::any()
+                    // First prioritize tsvector full-text search
+                    .add(Expr::cust_with_expr(
+                        "to_tsvector('english', components.title) @@ plainto_tsquery('english', $1)",
+                        search_term
+                    ))
+                    // Then prioritize trigram similarity
+                    .add(Expr::cust_with_expr("components.title % $1", search_term))
+            )
+            .distinct()
+            .into_tuple::<Uuid>()
+            .all(db)
+            .await
     }
 
     /// Get a single course with all its components, meetings, and instructors
