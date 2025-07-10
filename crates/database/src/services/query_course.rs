@@ -1,7 +1,7 @@
 use crate::entities::{components, courses, instructor_meetings, instructors, meetings};
 use sea_orm::{
-    ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, JoinType, PaginatorTrait,
-    QueryFilter, QuerySelect, QueryTrait, RelationTrait, prelude::Expr, sea_query::ExprTrait,
+    ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
+    QuerySelect, QueryTrait, prelude::Expr, sea_query::ExprTrait,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -19,40 +19,18 @@ impl QueryCourseService {
         search: Option<String>,
         departments: Option<Vec<String>>,
     ) -> Result<(Vec<courses::Model>, u64), DbErr> {
-        let mut query = courses::Entity::find();
-        let mut condition = Condition::all();
+        let mut base_condition = Condition::all();
 
         if let Some(seasons) = seasons
             && !seasons.is_empty()
         {
-            condition = condition.add(courses::Column::Season.is_in(seasons));
+            base_condition = base_condition.add(courses::Column::Season.is_in(seasons));
         }
 
         if let Some(years) = years
             && !years.is_empty()
         {
-            condition = condition.add(courses::Column::Year.is_in(years));
-        }
-
-        if let Some(search) = search {
-            // Join with components table to search component titles as well
-            query = query.join(JoinType::LeftJoin, courses::Relation::Components.def());
-
-            let search_condition = Condition::any()
-                .add(courses::Column::Number.like(format!("%{search}%")))
-                .add(courses::Column::Description.like(format!("%{search}%")))
-                .add(components::Column::Title.like(format!("%{search}%")))
-                // Trigram similarity (fuzzy search)
-                .add(Expr::cust_with_expr(
-                    "courses.description % $1",
-                    search.clone(),
-                ))
-                .add(Expr::cust_with_expr("components.title % $1", search));
-
-            condition = condition.add(search_condition);
-
-            // Use distinct to avoid duplicate courses when multiple components match
-            query = query.distinct_on([courses::Column::Id]);
+            base_condition = base_condition.add(courses::Column::Year.is_in(years));
         }
 
         // The first two digits of the course number are the department prefix
@@ -60,11 +38,50 @@ impl QueryCourseService {
             && !departments.is_empty()
         {
             let dept_codes: Vec<String> = departments.into_iter().collect();
-            condition = condition
+            base_condition = base_condition
                 .add(Expr::cust("substring(courses.number from 1 for 2)").is_in(dept_codes));
         }
 
-        query = query.filter(condition);
+        let mut query = courses::Entity::find().filter(base_condition);
+
+        // Search courses directly using full-text search
+        if let Some(search) = search {
+            let course_search_condition = Condition::any()
+                // Use the composite GIN index on the tsvector column
+                .add(Expr::cust_with_expr(
+                    "(courses.number || ' ' || COALESCE(courses.description, '')) @@ plainto_tsquery($1)",
+                    search.clone()
+                ))
+                // Fallback to trigram for partial matches
+                .add(Expr::cust_with_expr(
+                    "courses.number % $1 OR COALESCE(courses.description, '') % $1",
+                    search.clone()
+                ));
+
+            query = query.filter(course_search_condition);
+
+            // Search components separately and get their course IDs
+            let component_course_ids = components::Entity::find()
+                .select_only()
+                .column(components::Column::CourseId)
+                .filter(
+                    Expr::cust_with_expr("components.title % $1", search.clone()).or(
+                        Expr::cust_with_expr(
+                            "to_tsvector('english', components.title) @@ plainto_tsquery($1)",
+                            search,
+                        ),
+                    ),
+                )
+                .into_tuple::<Uuid>()
+                .all(db)
+                .await?;
+
+            // Combine results (courses matching directly OR courses with matching titles)
+            if !component_course_ids.is_empty() {
+                query = query
+                    .filter(Condition::any().add(courses::Column::Id.is_in(component_course_ids)));
+            }
+        }
 
         println!(
             "Generated SQL: {}",
