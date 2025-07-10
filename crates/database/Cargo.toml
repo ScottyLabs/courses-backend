@@ -13,3 +13,4 @@ models = { path = "../models", features = ["database"] }
 sea-orm = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+uuid = { version = "1.17.0", features = ["v4"] }

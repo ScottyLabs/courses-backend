@@ -3,8 +3,12 @@ use models::{
     course_data::{ComponentType, CourseObject},
     syllabus_data::SyllabusMap,
 };
-use sea_orm::{ActiveValue::Set, Condition, DatabaseTransaction, TransactionTrait, prelude::*};
+use sea_orm::{
+    ActiveValue::Set, ColumnTrait, Condition, DatabaseConnection, DatabaseTransaction, DbErr,
+    EntityTrait, PaginatorTrait, QueryFilter, TransactionTrait,
+};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 pub struct CourseService;
 
