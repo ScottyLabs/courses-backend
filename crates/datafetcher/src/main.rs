@@ -1,4 +1,5 @@
-use database::{db::create_connection, services::save_course::SaveCourseService};
+//use database::db::create_connection;
+//use database::services::save_course::SaveCourseService;
 use datafetcher::{
     courses::{first_pass::first_pass, second_pass::second_pass},
     syllabi::create_syllabus_map,
@@ -192,9 +193,9 @@ async fn main() {
     let overall_start = Instant::now();
 
     println!("Creating database connection...");
-    let db = create_connection()
-        .await
-        .expect("Failed to connect to database");
+    // let db = create_connection()
+    //     .await
+    //     .expect("Failed to connect to database");
 
     println!("Starting data fetching...");
 
@@ -294,19 +295,19 @@ async fn main() {
     let save_start = Instant::now();
 
     // Save courses to the database
-    match SaveCourseService::save_courses(&db, course_objs, syllabus_map).await {
-        Ok(course_ids) => {
-            println!(
-                "Successfully saved {} courses to database in {:?}",
-                course_ids.len(),
-                save_start.elapsed()
-            );
-        }
-        Err(e) => {
-            eprintln!("Failed to save courses to database: {e}");
-            std::process::exit(1);
-        }
-    }
+    // match SaveCourseService::save_courses(&db, course_objs, syllabus_map).await {
+    //     Ok(course_ids) => {
+    //         println!(
+    //             "Successfully saved {} courses to database in {:?}",
+    //             course_ids.len(),
+    //             save_start.elapsed()
+    //         );
+    //     }
+    //     Err(e) => {
+    //         eprintln!("Failed to save courses to database: {e}");
+    //         std::process::exit(1);
+    //     }
+    // }
 
     println!("Total operation completed in {:?}", overall_start.elapsed());
 }
