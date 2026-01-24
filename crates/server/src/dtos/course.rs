@@ -33,9 +33,7 @@ pub struct MeetingResponse {
     pub days_pattern: String,
     pub time_begin: Option<NaiveTime>,
     pub time_end: Option<NaiveTime>,
-    pub bldg_room: String,
     pub campus: String,
-    pub instructors: Vec<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

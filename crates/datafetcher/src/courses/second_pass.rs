@@ -7,19 +7,15 @@ use models::{
 
 fn parse_meetings(
     lines: &[Line],
-    instructors: String,
     days: String,
     time_start: String,
     time_end: String,
-    building_room: String,
     campus: String,
 ) -> (Vec<Meeting>, &[Line]) {
     let mut meetings = vec![Meeting {
         days: days.into(),
         time: TimeRange::from_strings(&time_start, &time_end),
-        bldg_room: building_room.into(),
         campus,
-        instructors: instructors.clone().into(),
     }];
 
     let mut remaining = lines;
@@ -29,7 +25,6 @@ fn parse_meetings(
             days,
             time_start,
             time_end,
-            building_room,
             campus,
         },
         rest @ ..,
@@ -38,9 +33,7 @@ fn parse_meetings(
         meetings.push(Meeting {
             days: days.clone().into(),
             time: TimeRange::from_strings(time_start, time_end),
-            bldg_room: building_room.clone().into(),
             campus: campus.to_owned(),
-            instructors: instructors.clone().into(),
         });
 
         remaining = rest;
@@ -61,19 +54,15 @@ fn parse_component(
                 days,
                 time_start,
                 time_end,
-                building_room,
                 campus,
-                instructors,
             },
             rest @ ..,
         ] => {
             let (meetings, remaining) = parse_meetings(
                 rest,
-                instructors.clone(),
                 days.clone(),
                 time_start.clone(),
                 time_end.clone(),
-                building_room.clone(),
                 campus.clone(),
             );
 
@@ -95,19 +84,15 @@ fn parse_component(
                 days,
                 time_start,
                 time_end,
-                building_room,
                 campus,
-                instructors,
             },
             rest @ ..,
         ] => {
             let (meetings, remaining) = parse_meetings(
                 rest,
-                instructors.clone(),
                 days.clone(),
                 time_start.clone(),
                 time_end.clone(),
-                building_room.clone(),
                 campus.clone(),
             );
 
@@ -264,9 +249,7 @@ pub fn second_pass(lines: Vec<Line>, season: Season, year: Year) -> Vec<CourseEn
 mod test {
     use crate::courses::{first_pass::parse_line, second_pass::second_pass};
     use models::{
-        course_data::{
-            BuildingRoom, ComponentType, CourseComponent, CourseEntry, Meeting, TimeRange,
-        },
+        course_data::{ComponentType, CourseComponent, CourseEntry, Meeting, TimeRange},
         days::{DaySet, Days},
         syllabus_data::{Season, Year},
         units::Units,
@@ -312,9 +295,7 @@ mod test {
                     meetings: vec![Meeting {
                         days: Days::Days(DaySet::THURSDAY),
                         time: Some(TimeRange::from_strings("12:30PM", "01:50PM").unwrap()),
-                        bldg_room: BuildingRoom::Specific("MM".to_string(), "A14".to_string()),
                         campus: "Pittsburgh, Pennsylvania".to_owned(),
-                        instructors: "Workinger".into(),
                     }],
                 }],
             },
@@ -331,9 +312,7 @@ mod test {
                         meetings: vec![Meeting {
                             days: Days::Days(DaySet::MONDAY | DaySet::WEDNESDAY),
                             time: Some(TimeRange::from_strings("10:00AM", "10:50AM").unwrap()),
-                            bldg_room: BuildingRoom::Specific("CFA".to_string(), "A9".to_string()),
                             campus: "Pittsburgh, Pennsylvania".to_owned(),
-                            instructors: "Holmes".into(),
                         }],
                     },
                     CourseComponent {
@@ -343,9 +322,7 @@ mod test {
                         meetings: vec![Meeting {
                             days: Days::Days(DaySet::MONDAY | DaySet::WEDNESDAY),
                             time: Some(TimeRange::from_strings("10:00AM", "10:50AM").unwrap()),
-                            bldg_room: BuildingRoom::Specific("CFA".to_string(), "A9".to_string()),
                             campus: "Pittsburgh, Pennsylvania".to_owned(),
-                            instructors: "Holmes".into(),
                         }],
                     },
                 ],
@@ -363,9 +340,7 @@ mod test {
                         meetings: vec![Meeting {
                             days: Days::TBA,
                             time: None,
-                            bldg_room: BuildingRoom::DoesNotMeet,
                             campus: "Pittsburgh, Pennsylvania".to_owned(),
-                            instructors: "Bard".into(),
                         }],
                     },
                     CourseComponent {
@@ -375,9 +350,7 @@ mod test {
                         meetings: vec![Meeting {
                             days: Days::Days(DaySet::MONDAY),
                             time: Some(TimeRange::from_strings("10:00AM", "10:50AM").unwrap()),
-                            bldg_room: BuildingRoom::Specific("MM".to_string(), "303".to_string()),
                             campus: "Pittsburgh, Pennsylvania".to_owned(),
-                            instructors: "Bard".into(),
                         }],
                     },
                 ],
@@ -395,9 +368,7 @@ mod test {
                         meetings: vec![Meeting {
                             days: Days::Days(DaySet::TUESDAY | DaySet::THURSDAY),
                             time: Some(TimeRange::from_strings("11:00AM", "12:20PM").unwrap()),
-                            bldg_room: BuildingRoom::ToBeDetermined,
                             campus: "Pittsburgh, Pennsylvania".to_owned(),
-                            instructors: "Sindi".into(),
                         }],
                     },
                     CourseComponent {
@@ -407,9 +378,7 @@ mod test {
                         meetings: vec![Meeting {
                             days: Days::Days(DaySet::MONDAY | DaySet::WEDNESDAY),
                             time: Some(TimeRange::from_strings("11:00AM", "12:20PM").unwrap()),
-                            bldg_room: BuildingRoom::ToBeAnnounced,
                             campus: "Pittsburgh, Pennsylvania".to_owned(),
-                            instructors: "Stone".into(),
                         }],
                     },
                 ],

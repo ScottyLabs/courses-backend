@@ -11,7 +11,6 @@ pub struct Model {
     pub days_pattern: String,
     pub time_begin: Option<Time>,
     pub time_end: Option<Time>,
-    pub bldg_room: String,
     pub campus: String,
 }
 

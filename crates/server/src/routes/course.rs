@@ -10,7 +10,6 @@ use axum::{
     http::StatusCode,
 };
 use database::{
-    db::create_connection,
     entities::{components, courses, instructors, meetings},
     services::query_course::QueryCourseService,
 };
@@ -29,56 +28,8 @@ use serde_json::json;
     ),
     tag = "Courses"
 )]
-pub async fn get_courses(
-    Query(params): Query<CourseQueryParams>,
-) -> Result<Json<PaginatedCoursesResponse>, StatusCode> {
-    let db = create_connection()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let (courses, total_items) = QueryCourseService::get_courses_paginated(
-        &db,
-        params.page,
-        params.per_page,
-        params.season,
-        params.year,
-        // params.search,
-        params.department,
-    )
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    // Get detailed course data with components
-    let course_ids = courses.iter().map(|c| c.id).collect();
-    let detailed_courses = QueryCourseService::get_courses_with_components(&db, course_ids)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    // Convert to response DTOs
-    let course_responses = detailed_courses
-        .into_iter()
-        .map(|(course, components)| convert_to_course_response(course, components))
-        .collect();
-
-    // Calculate pagination metadata
-    let total_pages = total_items.div_ceil(params.per_page);
-    let pagination = PaginationMeta {
-        page: params.page,
-        per_page: params.per_page,
-        total_pages,
-        total_items,
-        has_next: params.page < total_pages,
-        has_prev: params.page > 1,
-    };
-
-    Ok(Json(PaginatedCoursesResponse {
-        courses: course_responses,
-        pagination,
-    }))
-}
-
 /// Get a specific course by ID
-#[utoipa::path(
+#[utoipa::path](
     get,
     path = "/courses/{id}",
     params(
@@ -92,11 +43,6 @@ pub async fn get_courses(
     tag = "Courses"
 )]
 pub async fn get_course_by_id(Path(id): Path<Uuid>) -> Result<Json<CourseResponse>, StatusCode> {
-    // Create database connection
-    let db = create_connection()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
     // Get course by ID
     let course_data = QueryCourseService::get_course_by_id(&db, id)
         .await
@@ -122,11 +68,6 @@ pub async fn get_course_by_id(Path(id): Path<Uuid>) -> Result<Json<CourseRespons
     tag = "Courses"
 )]
 pub async fn get_course_filters() -> Result<Json<serde_json::Value>, StatusCode> {
-    // Create database connection
-    let db = create_connection()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
     // Get distinct seasons and years
     let seasons_and_years = courses::Entity::find()
         .select_only()
@@ -134,8 +75,6 @@ pub async fn get_course_filters() -> Result<Json<serde_json::Value>, StatusCode>
         .column(courses::Column::Year)
         .distinct()
         .into_tuple::<(String, i16)>()
-        .all(&db)
-        .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut seasons = HashSet::new();
@@ -192,9 +131,7 @@ fn convert_to_course_response(
                         days_pattern: meeting.days_pattern,
                         time_begin: meeting.time_begin,
                         time_end: meeting.time_end,
-                        bldg_room: meeting.bldg_room,
                         campus: meeting.campus,
-                        instructors: instructor_names,
                     }
                 })
                 .collect();

@@ -2,7 +2,6 @@
 //use database::services::save_course::SaveCourseService;
 use datafetcher::{
     courses::{first_pass::first_pass, second_pass::second_pass},
-    syllabi::create_syllabus_map,
     util::{
         execute_hurl, get_capture_value, get_captures, get_optional_string_value,
         get_parsed_struct_value, insert_variable, parse_from_raw_html,
