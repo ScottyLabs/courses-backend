@@ -199,13 +199,13 @@ async fn main() {
 
     println!("Starting data fetching...");
 
-    let syllabus_future = task::spawn_blocking(|| {
-        println!("Fetching syllabus data...");
-        let start = Instant::now();
-        let result = create_syllabus_map();
-        println!("Syllabus data fetched in {:?}", start.elapsed());
-        result
-    });
+    // let syllabus_future = task::spawn_blocking(|| {
+    //     println!("Fetching syllabus data...");
+    //     let start = Instant::now();
+    //     let result = create_syllabus_map();
+    //     println!("Syllabus data fetched in {:?}", start.elapsed());
+    //     result
+    // });
 
     let course_objs_future = async {
         println!("Fetching course data...");
@@ -288,9 +288,10 @@ async fn main() {
 
     // Fetch syllabi and course objects concurrently
     println!("Waiting for syllabus and course data...");
-    let (syllabus_result, course_objs) = join!(syllabus_future, course_objs_future);
-    let syllabus_map = syllabus_result.expect("create_syllabus_map panicked");
+    // let (syllabus_result, course_objs) = join!(syllabus_future, course_objs_future);
+    // let syllabus_map = syllabus_result.expect("create_syllabus_map panicked");
 
+    let course_objs = course_objs_future;
     println!("Starting database save operation...");
     let save_start = Instant::now();
 
