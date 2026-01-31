@@ -10,10 +10,8 @@ use sea_orm::EnumIter;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter, Result as FmtResult},
-    ops::Deref,
     str::FromStr,
 };
-use strum::{EnumProperty, IntoEnumIterator};
 
 #[cfg(feature = "database")]
 use sea_orm::DeriveActiveEnum;
@@ -43,104 +41,6 @@ impl TimeRange {
     }
 }
 
-/// Represents a place where a meeting can occur
-#[derive(Debug, Clone, PartialEq, Serialize, EnumProperty, EnumIter)]
-pub enum BuildingRoom {
-    #[strum(props(display = "TBA", parse = "TBA"))]
-    ToBeAnnounced,
-
-    #[strum(props(display = "TBD", parse = "TBD TBD"))]
-    ToBeDetermined,
-
-    #[strum(props(display = "DNM", parse = "DNM DNM"))]
-    DoesNotMeet,
-
-    #[strum(props(display = "OFF PITT", parse = "OFF PITT"))]
-    OffPitt,
-
-    #[strum(props(display = "REMOTE", parse = "CMU REMOTE"))]
-    Remote,
-
-    Specific(String, String),
-}
-
-impl FromStr for BuildingRoom {
-    type Err = ();
-
-    fn from_str(bldg_room: &str) -> Result<Self, Self::Err> {
-        Self::iter()
-            .find(|v| {
-                v.get_str("parse") == Some(bldg_room) || v.get_str("display") == Some(bldg_room)
-            })
-            .or_else(|| {
-                // Split into building and room, defaulting to empty string if part is missing
-                let mut parts = bldg_room.split_whitespace();
-                Some(Self::Specific(
-                    parts.next().unwrap_or("").to_string(),
-                    parts.collect::<Vec<_>>().join(" "),
-                ))
-            })
-            .ok_or(())
-    }
-}
-
-impl From<String> for BuildingRoom {
-    fn from(bldg_room: String) -> Self {
-        Self::from_str(&bldg_room).unwrap()
-    }
-}
-
-impl Display for BuildingRoom {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        match self {
-            Self::Specific(building, room) => write!(f, "{building} {room}"),
-            _ => write!(f, "{}", self.get_str("display").unwrap_or_default()),
-        }
-    }
-}
-
-/// Represents the instructor(s) for a course
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Instructors(Option<Vec<String>>);
-
-impl Deref for Instructors {
-    type Target = Option<Vec<String>>;
-
-    /// Deref to the inner expression
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl FromStr for Instructors {
-    type Err = ();
-
-    fn from_str(instructors: &str) -> Result<Self, Self::Err> {
-        let instructors = instructors
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .collect::<Vec<_>>();
-
-        if instructors.is_empty() {
-            Ok(Self(None))
-        } else {
-            Ok(Self(Some(instructors)))
-        }
-    }
-}
-
-impl From<&str> for Instructors {
-    fn from(s: &str) -> Self {
-        Self::from_str(s).unwrap()
-    }
-}
-
-impl From<String> for Instructors {
-    fn from(s: String) -> Self {
-        Self::from_str(&s).unwrap()
-    }
-}
-
 /// Represents a single meeting with campus and instructor
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Meeting {
@@ -148,12 +48,8 @@ pub struct Meeting {
     pub days: Days,
     /// Time range for the meeting
     pub time: Option<TimeRange>,
-    /// Building and room
-    pub bldg_room: BuildingRoom,
     /// CMU Campus
     pub campus: String,
-    /// Instructor(s) for this specific meeting
-    pub instructors: Instructors,
 }
 
 /// Type of course component
@@ -321,86 +217,6 @@ mod test {
 
         // Test invalid range (end before begin)
         assert!(TimeRange::from_strings("11:00AM", "09:00AM").is_none());
-    }
-
-    #[test]
-    fn test_buildingroom_from_str() {
-        // Test special cases
-        assert!(matches!(
-            BuildingRoom::from_str("TBA").unwrap(),
-            BuildingRoom::ToBeAnnounced
-        ));
-        assert!(matches!(
-            BuildingRoom::from_str("TBD TBD").unwrap(),
-            BuildingRoom::ToBeDetermined
-        ));
-        assert!(matches!(
-            BuildingRoom::from_str("DNM DNM").unwrap(),
-            BuildingRoom::DoesNotMeet
-        ));
-        assert!(matches!(
-            BuildingRoom::from_str("OFF PITT").unwrap(),
-            BuildingRoom::OffPitt
-        ));
-        assert!(matches!(
-            BuildingRoom::from_str("CMU REMOTE").unwrap(),
-            BuildingRoom::Remote
-        ));
-
-        // Test specific building and room
-        if let BuildingRoom::Specific(building, room) = BuildingRoom::from_str("GHC 5222").unwrap()
-        {
-            assert_eq!(building, "GHC");
-            assert_eq!(room, "5222");
-        } else {
-            panic!("Expected BuildingRoom::Specific variant");
-        }
-
-        // Test building only
-        if let BuildingRoom::Specific(building, room) = BuildingRoom::from_str("GHC").unwrap() {
-            assert_eq!(building, "GHC");
-            assert_eq!(room, "");
-        } else {
-            panic!("Expected BuildingRoom::Specific variant");
-        }
-
-        // Test multipart room
-        if let BuildingRoom::Specific(building, room) =
-            BuildingRoom::from_str("CUC AR 254").unwrap()
-        {
-            assert_eq!(building, "CUC");
-            assert_eq!(room, "AR 254");
-        } else {
-            panic!("Expected BuildingRoom::Specific variant");
-        }
-    }
-
-    #[test]
-    fn test_buildingroom_display() {
-        assert_eq!(BuildingRoom::ToBeAnnounced.to_string(), "TBA");
-        assert_eq!(BuildingRoom::ToBeDetermined.to_string(), "TBD");
-        assert_eq!(BuildingRoom::DoesNotMeet.to_string(), "DNM");
-        assert_eq!(BuildingRoom::OffPitt.to_string(), "OFF PITT");
-        assert_eq!(BuildingRoom::Remote.to_string(), "REMOTE");
-        assert_eq!(
-            BuildingRoom::Specific("GHC".to_string(), "4102".to_string()).to_string(),
-            "GHC 4102"
-        );
-    }
-
-    #[test]
-    fn test_buildingroom_round_trip() {
-        for building_room in vec![
-            BuildingRoom::ToBeAnnounced,
-            BuildingRoom::ToBeDetermined,
-            BuildingRoom::DoesNotMeet,
-            BuildingRoom::OffPitt,
-            BuildingRoom::Remote,
-            BuildingRoom::Specific("GHC".to_string(), "4102".to_string()),
-        ] {
-            let s = building_room.to_string();
-            assert_eq!(BuildingRoom::from_str(&s).unwrap(), building_room);
-        }
     }
 
     #[test]

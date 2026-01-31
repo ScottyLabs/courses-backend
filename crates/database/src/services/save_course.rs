@@ -1,14 +1,13 @@
-use crate::entities::{components, courses, instructor_meetings, instructors, meetings};
+use crate::entities::{components, courses, meetings};
 use futures::future::try_join_all;
 use models::{
     course_data::{ComponentType, CourseObject},
     syllabus_data::SyllabusMap,
 };
 use sea_orm::{
-    ActiveValue::Set, ColumnTrait, DatabaseConnection, DatabaseTransaction, DbErr, EntityTrait,
-    QueryFilter, TransactionTrait,
+    ActiveValue::Set, DatabaseConnection, DbErr, EntityTrait, TransactionTrait,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct SaveCourseService;
@@ -81,13 +80,11 @@ impl SaveCourseService {
         syllabus_map: &SyllabusMap,
     ) -> Result<Vec<Uuid>, DbErr> {
         let txn = db.begin().await?;
-        let instructor_cache = Self::build_instructor_cache(&txn, &course_objs).await?;
 
         // Collect all data for bulk insertion
         let mut all_courses = Vec::new();
         let mut all_components = Vec::new();
         let mut all_meetings = Vec::new();
-        let mut all_instructor_meetings = Vec::new();
         let mut course_ids = Vec::new();
 
         // Prepare all data first
@@ -136,23 +133,8 @@ impl SaveCourseService {
                         days_pattern: Set(meeting.days.to_string()),
                         time_begin: Set(meeting.time.as_ref().map(|t| t.begin)),
                         time_end: Set(meeting.time.as_ref().map(|t| t.end)),
-                        bldg_room: Set(meeting.bldg_room.to_string()),
                         campus: Set(meeting.campus),
                     });
-
-                    // Save instructors for this meeting using the cache
-                    if let Some(instructors) = meeting.instructors.as_ref() {
-                        for instructor_name in instructors {
-                            if let Some(&instructor_id) = instructor_cache.get(instructor_name) {
-                                // Create a many-to-many link between instructor and meeting
-                                all_instructor_meetings.push(instructor_meetings::ActiveModel {
-                                    id: Set(Uuid::new_v4()),
-                                    instructor_id: Set(instructor_id),
-                                    meeting_id: Set(meeting_id),
-                                });
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -171,69 +153,9 @@ impl SaveCourseService {
                 .exec(&txn)
                 .await?;
         }
-        if !all_instructor_meetings.is_empty() {
-            instructor_meetings::Entity::insert_many(all_instructor_meetings)
-                .exec(&txn)
-                .await?;
-        }
 
         txn.commit().await?;
         Ok(course_ids)
-    }
-
-    /// Build a cache of all instructors
-    async fn build_instructor_cache(
-        txn: &DatabaseTransaction,
-        course_objs: &[CourseObject],
-    ) -> Result<HashMap<String, Uuid>, DbErr> {
-        // Collect all unique instructor names
-        let mut instructor_names = std::collections::HashSet::new();
-
-        for course_obj in course_objs {
-            for component in &course_obj.course.components {
-                for meeting in &component.meetings {
-                    if let Some(instructors) = meeting.instructors.as_ref() {
-                        for instructor in instructors {
-                            instructor_names.insert(instructor.clone());
-                        }
-                    }
-                }
-            }
-        }
-
-        println!(
-            "  Building cache for {} unique instructors",
-            instructor_names.len()
-        );
-
-        // Fetch existing instructors
-        let existing_instructors: Vec<instructors::Model> = instructors::Entity::find()
-            .filter(instructors::Column::Name.is_in(instructor_names.clone()))
-            .all(txn)
-            .await?;
-
-        let mut cache = HashMap::new();
-        for instructor in existing_instructors {
-            cache.insert(instructor.name.clone(), instructor.id);
-            instructor_names.remove(&instructor.name);
-        }
-
-        // Create new instructors for ones that don't exist
-        for new_instructor_name in instructor_names {
-            let new_id = Uuid::new_v4();
-            let new_instructor = instructors::ActiveModel {
-                id: Set(new_id),
-                name: Set(new_instructor_name.clone()),
-            };
-
-            instructors::Entity::insert(new_instructor)
-                .exec(txn)
-                .await?;
-
-            cache.insert(new_instructor_name, new_id);
-        }
-
-        Ok(cache)
     }
 
     fn course_to_active_model(course_obj: &CourseObject) -> courses::ActiveModel {

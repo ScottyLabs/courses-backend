@@ -24,14 +24,12 @@ pub enum Line {
     /// header, but this is not a requirement for `CourseComponent`s in general. These can have
     /// multiple meetings, and the first one is included in this line.
     PrimaryCourseComponent {
-        units: String,         // To become `Units`
-        section: String,       // To become `ComponentType` + CourseComponent.code
-        days: String,          // To become `Days`
-        time_start: String,    // To become `TimeRange.begin`
-        time_end: String,      // To become `TimeRange.end`
-        building_room: String, // To become `BuildingRoom`
+        units: String,      // To become `Units`
+        section: String,    // To become `ComponentType` + CourseComponent.code
+        days: String,       // To become `Days`
+        time_start: String, // To become `TimeRange.begin`
+        time_end: String,   // To become `TimeRange.end`
         campus: String,
-        instructors: String, // To become `Meeting.instructors`
     },
     /// Any additional components of a course. These will always share the same number of units
     /// as the `PrimaryCourseComponent` they are associated with.
@@ -40,9 +38,7 @@ pub enum Line {
         days: String,
         time_start: String,
         time_end: String,
-        building_room: String,
         campus: String,
-        instructors: String,
     },
     /// An additional meeting time for a `*CourseComponent`. These will always share the same title,
     /// units, and professors as the `*CourseComponent` they are associated with.
@@ -50,7 +46,6 @@ pub enum Line {
         days: String,
         time_start: String,
         time_end: String,
-        building_room: String,
         campus: String,
     },
     /// A blank line or whitespace-only

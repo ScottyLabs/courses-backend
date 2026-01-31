@@ -92,9 +92,7 @@ pub fn parse_line(line: &str) -> Line {
             days: days.to_string(),
             time_start: time_start.to_string(),
             time_end: time_end.to_string(),
-            building_room: building_room.to_string(),
             campus: campus.to_string(),
-            instructors: instructors.to_string(),
         },
 
         // SecondaryCourseComponent: starts with section
@@ -112,9 +110,7 @@ pub fn parse_line(line: &str) -> Line {
             days: days.to_string(),
             time_start: time_start.to_string(),
             time_end: time_end.to_string(),
-            building_room: building_room.to_string(),
             campus: campus.to_string(),
-            instructors: instructors.to_string(),
         },
 
         // AdditionalMeeting: days + times + building + campus
@@ -122,7 +118,6 @@ pub fn parse_line(line: &str) -> Line {
             days: days.to_string(),
             time_start: time_start.to_string(),
             time_end: time_end.to_string(),
-            building_room: building_room.to_string(),
             campus: campus.to_string(),
         },
 
@@ -131,7 +126,6 @@ pub fn parse_line(line: &str) -> Line {
             days: days.to_string(),
             time_start: time_start.to_string(),
             time_end: time_end.to_string(),
-            building_room: building_room.to_string(),
             campus: "Unknown Location".to_owned(),
         },
 
@@ -200,9 +194,7 @@ mod test {
                 days: "R".into(),
                 time_start: "12:30PM".into(),
                 time_end: "01:50PM".into(),
-                building_room: "MM A14".into(),
                 campus: "Pittsburgh, Pennsylvania".into(),
-                instructors: "Workinger".into(),
             },
             Line::CourseHeader {
                 number: "48104".into(),
@@ -214,18 +206,14 @@ mod test {
                 days: "MW".into(),
                 time_start: "10:00AM".into(),
                 time_end: "10:50AM".into(),
-                building_room: "CFA A9".into(),
                 campus: "Pittsburgh, Pennsylvania".into(),
-                instructors: "Holmes".into(),
             },
             Line::SecondaryCourseComponent {
                 section: "A2".into(),
                 days: "MW".into(),
                 time_start: "10:00AM".into(),
                 time_end: "10:50AM".into(),
-                building_room: "CFA A9".into(),
                 campus: "Pittsburgh, Pennsylvania".into(),
-                instructors: "Holmes".into(),
             },
             Line::CourseHeader {
                 number: "48214".into(),
@@ -237,18 +225,14 @@ mod test {
                 days: "TBA".into(),
                 time_start: "".into(),
                 time_end: "".into(),
-                building_room: "DNM DNM".into(),
                 campus: "Pittsburgh, Pennsylvania".into(),
-                instructors: "Bard".into(),
             },
             Line::SecondaryCourseComponent {
                 section: "A".into(),
                 days: "M".into(),
                 time_start: "10:00AM".into(),
                 time_end: "10:50AM".into(),
-                building_room: "MM 303".into(),
                 campus: "Pittsburgh, Pennsylvania".into(),
-                instructors: "Bard".into(),
             },
             Line::SecondaryCourseHeader {
                 number: "48313".into(),
@@ -262,9 +246,7 @@ mod test {
                 days: "TR".into(),
                 time_start: "11:00AM".into(),
                 time_end: "12:20PM".into(),
-                building_room: "TBD TBD".into(),
                 campus: "Pittsburgh, Pennsylvania".into(),
-                instructors: "Sindi".into(),
             },
             Line::ComponentTitle("New Pedogogies".into()),
             Line::ComponentTitle("Storycraft".into()),
@@ -273,9 +255,7 @@ mod test {
                 days: "MW".into(),
                 time_start: "11:00AM".into(),
                 time_end: "12:20PM".into(),
-                building_room: "TBA".into(),
                 campus: "Pittsburgh, Pennsylvania".into(),
-                instructors: "Stone".into(),
             },
         ];
 

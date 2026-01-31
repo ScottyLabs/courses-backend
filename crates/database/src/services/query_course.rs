@@ -1,7 +1,6 @@
 use crate::entities::{components, courses, instructor_meetings, instructors, meetings};
 use sea_orm::{
-    ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
-    QueryTrait, prelude::Expr, sea_query::ExprTrait,
+    ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, sea_query::ExprTrait,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -9,53 +8,6 @@ use uuid::Uuid;
 pub struct QueryCourseService;
 
 impl QueryCourseService {
-    /// Query courses with pagination and filtering
-    pub async fn get_courses_paginated(
-        db: &DatabaseConnection,
-        page: u64,
-        per_page: u64,
-        seasons: Option<Vec<String>>,
-        years: Option<Vec<i16>>,
-        departments: Option<Vec<String>>,
-    ) -> Result<(Vec<courses::Model>, u64), DbErr> {
-        let mut base_condition = Condition::all();
-
-        if let Some(seasons) = seasons
-            && !seasons.is_empty()
-        {
-            base_condition = base_condition.add(courses::Column::Season.is_in(seasons));
-        }
-
-        if let Some(years) = years
-            && !years.is_empty()
-        {
-            base_condition = base_condition.add(courses::Column::Year.is_in(years));
-        }
-
-        // The first two digits of the course number are the department prefix
-        if let Some(departments) = departments
-            && !departments.is_empty()
-        {
-            let dept_codes: Vec<String> = departments.into_iter().collect();
-            base_condition = base_condition
-                .add(Expr::cust("substring(courses.number from 1 for 2)").is_in(dept_codes));
-        }
-
-        let query = courses::Entity::find().filter(base_condition);
-
-        println!(
-            "Generated SQL: {}",
-            query.build(sea_orm::DatabaseBackend::Postgres)
-        );
-
-        // Apply pagination
-        let total_items = query.clone().count(db).await?;
-        let paginator = query.paginate(db, per_page);
-        let courses = paginator.fetch_page(page - 1).await?; // SeaORM uses 0-based pages
-
-        Ok((courses, total_items))
-    }
-
     /// Get a single course with all its components, meetings, and instructors
     pub async fn get_course_by_id(
         db: &DatabaseConnection,
