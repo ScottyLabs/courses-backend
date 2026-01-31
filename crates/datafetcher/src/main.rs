@@ -1,6 +1,5 @@
 //// use database::db::create_connection;
 //use database::services::save_course::SaveCourseService;
-use database::services::save_course::SaveCourseService;
 use datafetcher::{
     courses::{first_pass::first_pass, second_pass::second_pass},
     util::{
@@ -19,7 +18,11 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use reqwest::Client;
 use scraper::{Html, Selector};
 use std::{collections::HashMap, str::FromStr, time::Instant};
-use tokio::{join, task};
+
+use serde_json::to_writer_pretty;
+use std::fs::File;
+use std::io::BufWriter;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Hurl script for retrieving course details
 const COURSE_DETAILS_SCRIPT: &str = include_str!("../scripts/course_details.hurl");
@@ -192,7 +195,7 @@ fn process_course_details(course: CourseEntry) -> CourseObject {
 async fn main() {
     let overall_start = Instant::now();
 
-    println!("Creating database connection...");
+    // println!("Creating database connection...");
     // let db = create_connection()
     //     .await
     //     .expect("Failed to connect to database");
@@ -272,9 +275,19 @@ async fn main() {
         println!("Processing course details...");
         let details_start = Instant::now();
 
+        let total_courses = course_entries.len();
+        let progress = AtomicUsize::new(0);
+
         let course_objs = course_entries
             .into_par_iter()
-            .map(process_course_details)
+            .map(|course| {
+                let obj = process_course_details(course);
+                let done = progress.fetch_add(1, Ordering::Relaxed) + 1;
+                if done % 100 == 0 || done == total_courses {
+                    println!("Processed {done}/{total_courses} courses...");
+                }
+                obj
+            })
             .collect::<Vec<_>>();
 
         println!("Processed course details in {:?}", details_start.elapsed());
@@ -287,12 +300,12 @@ async fn main() {
     };
 
     // Fetch syllabi and course objects concurrently
-    println!("Waiting for syllabus and course data...");
+    // println!("Waiting for syllabus and course data...");
     // let (syllabus_result, course_objs) = join!(syllabus_future, course_objs_future);
     // let syllabus_map = syllabus_result.expect("create_syllabus_map panicked");
 
-    let course_objs = course_objs_future;
-    println!("Starting database save operation...");
+    let course_objs = course_objs_future.await;
+    // println!("Starting database save operation...");
     let save_start = Instant::now();
 
     // Save courses to the database
@@ -309,6 +322,10 @@ async fn main() {
     //         std::process::exit(1);
     //     }
     // }
+
+    let file = File::create("course_objs.json").expect("create json");
+    let writer = BufWriter::new(file);
+    to_writer_pretty(writer, &course_objs).expect("write json");
 
     println!("Total operation completed in {:?}", overall_start.elapsed());
 }

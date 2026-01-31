@@ -136,6 +136,7 @@ fn parse_components(
                 let (component, maybe_units, rest) =
                     parse_component(remaining, header_title.clone());
 
+                // println!("{}", first_units);
                 if first_units.is_none() {
                     first_units = maybe_units;
                 }
